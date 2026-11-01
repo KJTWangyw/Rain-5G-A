@@ -1,0 +1,8 @@
+{
+  "refs_per_cell": 2000,
+  "bootstrap_draws": 400,
+  "seed": 20261101,
+  "wall_seconds": 1858.9,
+  "J": 144,
+  "H": 144.0
+}
