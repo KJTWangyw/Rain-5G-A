@@ -33,7 +33,7 @@ error is common to all attenuation estimates and is not reduced by averaging. Th
 ```bash
 pip install -r requirements.txt
 python -m pytest -q                      # about 5 s
-python experiments/run_main.py           # 17 conditions x 2000 references; about 20 min on 4 cores
+python experiments/run_main.py           # 17 conditions x 2000 references; about 31 min on 4 cores
 python experiments/benchmark_timing.py   # single-core cost of each interval
 python experiments/summarize.py          # results/summary.json (every number quoted in the paper)
 python experiments/make_figures.py       # paper/figures/*.png and *.pdf

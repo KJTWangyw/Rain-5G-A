@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 from matplotlib.patches import FancyArrowPatch, Rectangle  # noqa: E402
+from matplotlib.ticker import NullFormatter  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -29,7 +30,7 @@ plt.rcParams.update({
 })
 COLORS = {"independent": "#7f7f7f", "local": "#c26a1b", "complete": "#0f6e6e", "bootstrap": "#4b3f8f",
           "crb": "#000000", "empirical": "#b2182b"}
-LABELS = {"independent": "Independent (wrong)", "local": "Fixed-weight local", "complete": "Complete (closed form)",
+LABELS = {"independent": "Independent (wrong)", "local": "Fixed-weight", "complete": "Complete (closed form)",
           "bootstrap": "Parametric bootstrap", "crb": "Information bound"}
 SNR_COLORS = {0: "#0f6e6e", 5: "#4b3f8f", 15: "#c26a1b", 25: "#7f7f7f"}
 
@@ -103,6 +104,8 @@ def fig_variance(res, out, cfg):
         ax.errorbar(d.n, d.emp_var, yerr=[d.emp_var - d.emp_var_lo, d.emp_var_hi - d.emp_var], fmt="o",
                     color=COLORS["empirical"], ms=3.5, capsize=2, lw=0.8, label="Simulated")
         ax.set_xscale("log"), ax.set_yscale("log")
+        ax.set_ylim(0.008, 1.2)
+        ax.yaxis.set_minor_formatter(NullFormatter())
         ax.set_xticks([1, 4, 16, 32], ["1", "4", "16", "32"])
         ax.set_xlabel("Number of averaged observations $n$")
         ax.set_title(f"{tag} {snr} dB, $M$ = {M}", loc="left")
@@ -117,7 +120,7 @@ def fig_shared(res, out, cfg):
     a2 = 10.0 ** (-cfg["attenuation_db"] / 10.0)
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(6.3, 2.7), gridspec_kw={"wspace": 0.38})
     g = np.logspace(np.log10(0.8), np.log10(2.5e4), 300)
-    ax1.plot(g, g / (g + 1.0), color=COLORS["local"], lw=1.0, label="Fixed-weight local (expected)")
+    ax1.plot(g, g / (g + 1.0), color=COLORS["local"], lw=1.0, label="Fixed-weight (expected)")
     ax1.axhline(1.0, color="black", lw=0.8, ls="--", label="Information bound")
     for snr, col in SNR_COLORS.items():
         g_t = a2 * 10 ** (snr / 10)

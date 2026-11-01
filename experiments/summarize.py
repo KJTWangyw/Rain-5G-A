@@ -157,7 +157,7 @@ def main():
     # Cost
     s.update({"ms_local": f(timing["ms_local"], 2), "ms_complete": f(timing["ms_complete"], 2),
               "ms_boot": f(timing["ms_bootstrap"], 1),
-              "speedup": f"{timing['ms_bootstrap'] / timing['ms_complete']:.0f}"})
+              "speedup": f"{float(f'{timing['ms_bootstrap'] / timing['ms_complete']:.2g}'):.0f}"})
 
     # Rain-rate floor: shared standard deviation and relative rain-rate error at the configured attenuation
     rows = []

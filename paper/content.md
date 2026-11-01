@@ -33,7 +33,7 @@ $$r_j = h_j + e_{0j},\qquad z_{tj} = a_t\,e^{\mathrm{i}\phi_t} h_j + e_{tj},\qqu
 
 where $h_j$ is the unknown clear-sky channel on pilot $j$, $r_j$ is the reference obtained by coherently averaging $M$ clear-sky slots, $z_{tj}$ is the pilot of rain observation $t$ with common phase $\phi_t$, and $e_{0j}$ and $e_{tj}$ are independent circular complex Gaussian errors with variances $v_0 = v/M$ and $v$. The noise variance $v$ is known from the receiver calibration. With $H = \sum_j |h_j|^2$, the per-pilot reference and current SNRs are $\gamma_{\mathrm{r}} = H/(Jv_0)$ and $\gamma_{\mathrm{t}} = a^2 H/(Jv)$; for unit mean pilot gain, $\gamma_{\mathrm{r}} = M\cdot\mathrm{SNR}$ and $\gamma_{\mathrm{t}} = a^2\,\mathrm{SNR}$. Figure @fig:schematic shows the pilot structure and the reuse of the reference.
 
-![Pilot structure and reuse of the clear-sky reference. (a) PDSCH DM-RS configuration type 1 on OFDM symbols 2 and 11 (two of the 12 resource blocks shown). (b) One reference, averaged from $M$ clear-sky slots, is reused for $n$ rain observations; its error $e_{0j}$ enters every attenuation estimate.](fig1_schematic.png){#fig:schematic width=14.6}
+![Pilot structure and reference reuse: (a) DM-RS type 1 on symbols 2 and 11 (two of 12 RB shown); (b) one reference from $M$ clear-sky slots serves $n$ rain observations.](fig1_schematic.png){#fig:schematic width=14.6}
 
 ## 2.2 Profile amplitude estimator
 
@@ -89,7 +89,7 @@ $$\operatorname{Var}(\bar{A}_n)\approx S+\frac{U}{n},\qquad S=\frac{K^2}{2J\gamm
 
 $$U=\frac{K^2}{2J\gamma_{\mathrm t}}+\frac{K^2}{2J\gamma_{\mathrm t}\gamma_{\mathrm r}}\left(\frac{\gamma_{\mathrm r}-\gamma_{\mathrm t}}{\gamma_{\mathrm r}+\gamma_{\mathrm t}}\right)^2+\frac{K^2}{J(\gamma_{\mathrm r}+\gamma_{\mathrm t})^2}$$ {#eq:independent}
 
-The terms in $X$ and $Y_t$ reproduce the two terms of the bound in Equation (@eq:crb): to first order in the noise, the profile estimator is efficient. The remaining terms come from the noise energies $Q_0$, $Q_t$ and the cross term $W_t$; they are of order $1/(J\gamma^2)$, comparable to the first-order terms when $\gamma_{\mathrm{r}}$ and $\gamma_{\mathrm{t}}$ are close to one, and negligible at high SNR. The shared excess over the bound is $2\gamma_{\mathrm{r}}/(\gamma_{\mathrm{r}}+\gamma_{\mathrm{t}})^2$, or about $2/\gamma_{\mathrm{r}}$ when $\gamma_{\mathrm{r}} \gg \gamma_{\mathrm{t}}$.
+The terms in $X$ and $Y_t$ reproduce the two terms of the bound in Equation (@eq:crb): to first order in the noise, the profile estimator is efficient. The remaining terms come from the noise energies $Q_0$, $Q_t$ and the cross term $W_t$; they are of order $1/(J\gamma^2)$, comparable to the first-order terms when $\gamma_{\mathrm{r}}$ and $\gamma_{\mathrm{t}}$ are close to one, and negligible at high SNR. The shared excess over the bound is $2\gamma_{\mathrm{r}}/(\gamma_{\mathrm{r}}+\gamma_{\mathrm{t}})^2$, or about $2/\gamma_{\mathrm{r}}$ when $\gamma_{\mathrm{r}}$ is much larger than $\gamma_{\mathrm{t}}$.
 
 ## 2.5 Interval construction
 
@@ -124,9 +124,9 @@ Monte Carlo | {{refs}} references per condition; $N_{\mathrm{b}}$ = {{draws}}
 
 ## 3.2 Variance of the averaged attenuation
 
-Table @tab:components compares the variance components at the main condition. The information bound has a shared term of {{crb_S}} dB², and at $n$ = 32 the shared reference accounts for {{share_main}}% of it (Equation @eq:share). The complete propagation predicts a shared term of {{comp_S}} dB², of which {{comp_Sq}} dB² comes from the reference noise energy, and the simulated shared covariance is {{sim_S}} dB² (95% interval {{sim_S_lo}}–{{sim_S_hi}}). The fixed-weight linearisation predicts {{loc_S}} dB², {{loc_under_pct}}% below the complete value and below the bound itself. For the mean of 32 estimates, the simulated variance is {{emp_V}} dB² ({{emp_V_lo}}–{{emp_V_hi}}), the complete propagation gives {{comp_V}} dB², and the fixed-weight linearisation gives {{loc_V}} dB².
+Table @tab:components compares the variance components at the main condition: the bound of Equation (@eq:crb), the fixed-weight linearisation of Equation (@eq:localbias), the complete propagation of Equations (@eq:complete)–(@eq:independent) and the simulation, with 95% bootstrap intervals. The information bound has a shared term of {{crb_S}} dB², and at $n$ = 32 the shared reference accounts for {{share_main}}% of it (Equation @eq:share). The complete propagation predicts a shared term of {{comp_S}} dB², of which {{comp_Sq}} dB² comes from the reference noise energy, and the simulated shared covariance is {{sim_S}} dB² (95% interval {{sim_S_lo}}–{{sim_S_hi}}). The fixed-weight linearisation predicts {{loc_S}} dB², {{loc_under_pct}}% below the complete value and below the bound itself. For the mean of 32 estimates, the simulated variance is {{emp_V}} dB² ({{emp_V_lo}}–{{emp_V_hi}}), the complete propagation gives {{comp_V}} dB², and the fixed-weight linearisation gives {{loc_V}} dB².
 
-::table tab:components | Variance components at the main condition (dB²; 0 dB, $M$ = 2, $J$ = 144): bound from Equation (@eq:crb), fixed-weight linearisation from Equation (@eq:localbias), complete propagation from Equations (@eq:complete)–(@eq:independent), and simulation with 95% bootstrap intervals. | 3.6,3.6,3.4,4.0
+::table tab:components | Variance components at the main condition (dB²; 0 dB, $M$ = 2, $J$ = 144). | 3.6,3.6,3.4,4.0
 Quantity | Shared $S$ | Independent $U$ | $\mathrm{Var}(\bar{A}_{32})$
 Information bound | {{crb_S}} | {{crb_U}} | {{crb_V}}
 Fixed-weight | {{loc_S}} | {{loc_U}} | {{loc_V}}
@@ -136,21 +136,21 @@ Simulation | {{sim_S}} ({{sim_S_lo}}–{{sim_S_hi}}) | {{sim_U}} | {{emp_V}} ({{
 
 Figure @fig:variance shows the variance as a function of $n$. At $M = 2$ the simulated variance levels off at the shared term predicted by Equation (@eq:complete), while the fixed-weight prediction stays below the bound and the independence assumption keeps decreasing as $1/n$. At $M = 64$ the shared term is small and all predictions except the independence assumption agree. Over the 16 conditions, the predicted shared term lies inside the 95% interval of the simulated shared covariance in {{S_cells_inside}} conditions, and the predicted variance of $\bar{A}_n$ lies inside the 95% interval of the simulated variance in {{V_combos_inside}} of {{n_combos}} combinations of condition and $n$.
 
-![Variance of the averaged attenuation versus the number of averaged observations at 0 dB: (a) $M$ = 2; (b) $M$ = 64. Points: simulation with 95% bootstrap intervals; lines: complete propagation (Equations @eq:complete–@eq:independent) and information bound (Equation @eq:crb); markers: mean fixed-weight and wrongly independent predictions.](fig2_variance.png){#fig:variance width=14.6}
+![Variance of the averaged attenuation at 0 dB versus the number of averaged observations: (a) $M$ = 2; (b) $M$ = 64. Points: simulation with 95% intervals.](fig2_variance.png){#fig:variance width=14.6}
 
 ## 3.3 Shared component and operating regime
 
 Figure @fig:shared(a) places all conditions on a common axis. The shared variance of the profile estimator exceeds the bound by the factor $1 + 2\gamma_{\mathrm{r}}/(\gamma_{\mathrm{r}}+\gamma_{\mathrm{t}})^2$, and the fixed-weight linearisation falls below it by the factor $\gamma_{\mathrm{r}}/(\gamma_{\mathrm{r}}+1)$; at the main condition the two ratios are {{comp_over_crb}} and {{loc_over_crb}}. Both deviations vanish as $\gamma_{\mathrm{r}}$ grows, so the noise-energy terms matter only for short references or low SNR. Figure @fig:shared(b) maps the shared fraction of Equation (@eq:share): it reaches {{share_main}}% at the main condition with $n$ = 32 and drops to {{share_m64}}% for $M$ = 64.
 
-![(a) Shared variance relative to the information bound versus the per-pilot reference SNR. Lines: Equations (@eq:localbias) and (@eq:complete); filled points: simulated shared covariance of the 16 conditions with 95% intervals; open squares: mean fixed-weight prediction. (b) Shared fraction of the bound, Equation (@eq:share), for {{A_db}} dB attenuation.](fig3_shared.png){#fig:shared width=14.6}
+![(a) Shared variance relative to the information bound; points: simulation with 95% intervals. (b) Shared fraction of the bound, Equation (@eq:share), at {{A_db}} dB.](fig3_shared.png){#fig:shared width=14.6}
 
 ## 3.4 Coverage, width and cost
 
 Figure @fig:coverage shows the empirical coverage of nominal 95% intervals for $n$ = 32. The closed-form intervals of Equation (@eq:interval) cover {{grid_comp_range}} in all 16 conditions and {{gridall_comp_range}} over all values of $n$. The fixed-weight intervals reach only {{loc_m2_range}} with a two-slot reference, and ignoring the shared covariance leaves the coverage as low as {{grid_ind_min}}%. The parametric bootstrap covers {{grid_boot_range}}.
 
-![Empirical coverage (%) of nominal 95% intervals for the mean of $n$ = 32 estimates in the 16 conditions ({{refs}} references each).](fig4_coverage.png){#fig:coverage width=14.6}
+![Empirical coverage (%) of nominal 95% intervals for $n$ = 32 in the 16 conditions ({{refs}} references each).](fig4_coverage.png){#fig:coverage width=14.6}
 
-Table @tab:main and Figure @fig:calibration detail the main condition. The closed-form interval covers {{cnt_comp}} of {{refs}} cases ({{cov_comp}}%), against {{cnt_loc}} ({{cov_loc}}%) for the fixed-weight linearisation; in paired comparison, {{mcn_comp_only}} cases are covered only by the closed form and {{mcn_loc_only}} only by the linearisation (exact McNemar test, {{mcn_p}}). The closed form and the bootstrap do not differ significantly ({{mcnb_p}}), and the bootstrap interval is {{w_ratio_boot}} times as wide. The closed-form coverage deviates from the nominal level by at most {{levels_dev_max}} percentage points between 50% and 95% (Figure @fig:calibration(a)). The width of the closed-form interval exceeds that of the fixed-weight interval by {{w_increase_pct}}%, which is the variance the linearisation omits. When the attenuation increases linearly from {{ramp_start}} to {{ramp_end}} dB over the 32 observations, the closed-form coverage stays within {{ramp_comp_range}} for all $n$, against {{ramp_loc_32}}% for the fixed-weight linearisation at $n$ = 32. Computing the closed-form interval takes {{ms_complete}} ms per window, comparable to the linearisation ({{ms_local}} ms), whereas the bootstrap takes {{ms_boot}} ms, {{speedup}} times longer.
+Table @tab:main and Figure @fig:calibration detail the main condition. The closed-form interval covers {{cnt_comp}} of {{refs}} cases ({{cov_comp}}%), against {{cnt_loc}} ({{cov_loc}}%) for the fixed-weight linearisation; in paired comparison, {{mcn_comp_only}} cases are covered only by the closed form and {{mcn_loc_only}} only by the linearisation (exact McNemar test, {{mcn_p}}). The closed form and the bootstrap do not differ significantly ({{mcnb_p}}), and their mean widths are nearly equal ({{w_comp}} and {{w_boot}} dB). The closed-form coverage deviates from the nominal level by at most {{levels_dev_max}} percentage points between 50% and 95% (Figure @fig:calibration(a)). The width of the closed-form interval exceeds that of the fixed-weight interval by {{w_increase_pct}}%, which is the variance the linearisation omits. When the attenuation increases linearly from {{ramp_start}} to {{ramp_end}} dB over the 32 observations, the closed-form coverage stays within {{ramp_comp_range}} for all $n$, against {{ramp_loc_32}}% for the fixed-weight linearisation at $n$ = 32. Computing the closed-form interval takes {{ms_complete}} ms per window, less than the fixed-weight linearisation ({{ms_local}} ms), whereas the bootstrap takes {{ms_boot}} ms, about {{speedup}} times longer.
 
 ::table tab:main | Nominal 95% intervals at the main condition (0 dB, $M$ = 2, $n$ = 32, {{refs}} references). | 4.2,2.2,3.8,2.2,2.2
 Method | Covered | Coverage, % (95% CI) | Width (dB) | Time (ms)
@@ -160,7 +160,7 @@ Complete (closed form) | {{cnt_comp}} | {{cov_comp}} ({{cov_comp_lo}}–{{cov_co
 Parametric bootstrap | {{cnt_boot}} | {{cov_boot}} ({{cov_boot_lo}}–{{cov_boot_hi}}) | {{w_boot}} | {{ms_boot}}
 ::end
 
-![Main condition (0 dB, $M$ = 2, $n$ = 32): (a) empirical versus nominal coverage with Wilson 95% intervals; (b) mean width of the 95% intervals with the empirical coverage above each bar.](fig5_calibration.png){#fig:calibration width=14.6}
+![Main condition (0 dB, $M$ = 2, $n$ = 32): (a) empirical versus nominal coverage with Wilson 95% intervals; (b) mean width of the 95% intervals.](fig5_calibration.png){#fig:calibration width=14.6}
 
 # Discussions
 
@@ -170,7 +170,7 @@ Equation (@eq:share) reduces the role of the reference to the ratio $n a^2/M$. T
 
 ## 4.2 Why the fixed-weight linearisation fails
 
-The fixed-weight linearisation under-covers for two separable reasons. First, the noisy reference energy used as plug-in places its prediction below the information bound by the factor $1+1/\gamma_{\mathrm{r}}$ (Equation @eq:localbias). Second, freezing the weights discards the noise-energy terms of Equation (@eq:implicit), so the actual variance of the profile estimator exceeds the bound by about $2/\gamma_{\mathrm{r}}$. At $\gamma_{\mathrm{r}} = {{g_r}}$ the two effects add up to an underestimate of the shared term by {{loc_under_pct}}%. The parametric bootstrap captures both effects because it re-evaluates the estimator, but the closed form reaches the same coverage at the cost of the linearisation. The bootstrap remains useful as a check for estimators without a closed-form root, for instance with frequency-dependent noise.
+The fixed-weight linearisation under-covers for two separable reasons. First, the noisy reference energy used as plug-in places its prediction below the information bound by the factor $1+1/\gamma_{\mathrm{r}}$ (Equation @eq:localbias). Second, freezing the weights discards the noise-energy terms of Equation (@eq:implicit), so the actual variance of the profile estimator exceeds the bound by about $2/\gamma_{\mathrm{r}}$. At $\gamma_{\mathrm{r}} = {{g_r}}$ the two effects add up to an underestimate of the shared term by {{loc_under_pct}}%. The parametric bootstrap captures both effects because it re-evaluates the estimator, but the closed form reaches the same coverage at a cost below that of the linearisation. The bootstrap remains useful as a check for estimators without a closed-form root, for instance with frequency-dependent noise.
 
 ## 4.3 Limitations and future study
 
