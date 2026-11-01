@@ -25,7 +25,7 @@ error is common to all attenuation estimates and is not reduced by averaging. Th
 | `src/nrpilot/rain.py` | ITU-R P.838-3 coefficients (horizontal polarisation) |
 | `experiments/` | Configuration, Monte Carlo study, timing benchmark, summary and figures |
 | `results/` | Aggregated results (`coverage.csv`, `variance.csv`, `components.csv`, `paired.csv`, `summary.json`, ...) |
-| `paper/` | Manuscript source (`content.md`), Word build script, figures, `Manuscript.docx` and `Manuscript.pdf` |
+| `paper/` | Manuscript source (`content.md`; Chinese `content_zh.md`), Word build script, figures, `Manuscript.docx`/`.pdf` and `Manuscript_zh.docx`/`.pdf` |
 | `tests/` | Unit tests (pilot extraction, estimator, bound, propagation, P.838-3) |
 
 ## Reproduce
@@ -38,6 +38,7 @@ python experiments/benchmark_timing.py   # single-core cost of each interval
 python experiments/summarize.py          # results/summary.json (every number quoted in the paper)
 python experiments/make_figures.py       # paper/figures/*.png and *.pdf
 python paper/build_manuscript.py         # paper/Manuscript.docx and Manuscript.pdf
+python experiments/make_figures.py --lang zh && python paper/build_manuscript.py --lang zh   # Chinese version
 ```
 
 `run_main.py` writes per-trial arrays to `results/raw/` (not versioned) and the aggregates to `results/`.
@@ -46,3 +47,5 @@ Seeds are fixed in `experiments/config.json`; a rerun reproduces the aggregates 
 Building the manuscript needs XeLaTeX with `unicode-math` and the TeX Gyre Termes Math font (equations),
 LibreOffice with the Math component (PDF conversion), and Times New Roman and Arial for an exact match of the
 journal template. `paper/template/reference.docx` holds only the template's styles and page setup.
+The Chinese version uses the template's 宋体/黑体 slots; on Linux they are rendered with Noto Serif/Sans CJK SC
+(map them with a fontconfig alias).

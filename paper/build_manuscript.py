@@ -4,14 +4,15 @@
 content.md syntax
   ::title / ::abstract / ::keywords   block until a blank line
   # Heading            numbered level-1 heading;  #* Heading  unnumbered;  ## 2.1 Heading  level 2
-  $$ LaTeX $$ {#eq:label}            display equation (numbered)
+  $$ LaTeX $$ {#eq:label}            display equation (numbered); without a label it is unnumbered
   ![caption](file.png){#fig:label width=14.5}
   ::table tab:label | caption | widths in cm      rows "a | b | c", first row is the header, end with ::end
   ::refs ... ::end                    one reference per line
   @eq:label, @fig:label, @tab:label   replaced by numbers; {{key}} replaced from results/summary.json
-Inline: $...$ (small LaTeX subset), *italic*, **bold**.
+Inline: $...$ (small LaTeX subset), *italic*, **bold**. A paragraph starting with "^ " continues the sentence of
+the preceding equation and is not indented (English paragraphs starting in lower case are treated the same way).
 
-Usage:  python paper/build_manuscript.py [--no-pdf]
+Usage:  python paper/build_manuscript.py [--lang en|zh] [--no-pdf]
 """
 from __future__ import annotations
 
@@ -29,6 +30,14 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 sys.path.insert(0, str(HERE))
 import docxkit as K  # noqa: E402
+
+
+LANG = {
+    "en": {"content": "content.md", "figures": "figures", "out": "Manuscript.docx", "abstract": "Abstract: ",
+           "keywords": "Keywords: ", "figure": "Figure", "table": "Table", "caption": "{label} {number}. "},
+    "zh": {"content": "content_zh.md", "figures": "figures_zh", "out": "Manuscript_zh.docx", "abstract": "摘要：",
+           "keywords": "关键词：", "figure": "图", "table": "表", "caption": "{label}{number}  "},
+}
 
 
 def fill_placeholders(text, values):
@@ -92,7 +101,7 @@ def parse(text):
             blocks.append(("refs", refs))
             i += 1
             continue
-        m = re.match(r"^\$\$(.+)\$\$\s*\{#(eq:[\w-]+)\}\s*$", line)
+        m = re.match(r"^\$\$(.+)\$\$\s*(?:\{#(eq:[A-Za-z0-9_-]+)\})?\s*$", line)
         if m:
             flush()
             blocks.append(("equation", {"tex": m.group(1).strip(), "label": m.group(2)}))
@@ -120,7 +129,7 @@ def parse(text):
 def number_labels(blocks):
     numbers, counters = {}, {"eq": 0, "fig": 0, "tab": 0}
     for kind, payload in blocks:
-        if kind in ("equation", "figure", "table"):
+        if kind in ("equation", "figure", "table") and payload["label"]:
             prefix = payload["label"].split(":")[0]
             counters[prefix] += 1
             numbers[payload["label"]] = counters[prefix]
@@ -132,47 +141,55 @@ def resolve_refs(text, numbers):
         if m.group(1) not in numbers:
             raise KeyError(f"unknown label {m.group(1)}")
         return str(numbers[m.group(1)])
-    return re.sub(r"@((?:eq|fig|tab):[\w-]+)", sub, text)
+    return re.sub(r"@((?:eq|fig|tab):[A-Za-z0-9_-]+)", sub, text)
 
 
-def build(content_path, out_docx, summary_path):
+def build(content_path, out_docx, summary_path, lang="en"):
+    L = LANG[lang]
     values = json.loads(Path(summary_path).read_text())
     text = fill_placeholders(Path(content_path).read_text(encoding="utf-8"), values)
     blocks = parse(text)
     numbers = number_labels(blocks)
     equations = [p["tex"] for k, p in blocks if k == "equation"]
-    images = K.render_equations(equations, HERE / "build" / "equations")
+    images = K.render_equations(equations, HERE / "build" / f"equations_{lang}")
     eq_iter = iter(images)
 
     doc = docx.Document(str(HERE / "template" / "reference.docx"))
     previous = None
     for kind, payload in blocks:
         if kind == "title":
-            p = K.title(doc, resolve_refs(payload, numbers))
+            first, *rest = resolve_refs(payload, numbers).split("<br>")
+            p = K.title(doc, first.strip())
+            for part in rest:
+                p.add_run().add_break()
+                p.add_run(part.strip())
             for r in p.runs:
                 r.font.size = Pt(12)
         elif kind == "abstract":
             p = K.body_paragraph(doc, indent=False)
-            K.add_run(p, "Abstract: ", bold=True)
+            K.add_run(p, L["abstract"], bold=True)
             K.add_rich_text(p, resolve_refs(payload, numbers))
         elif kind == "keywords":
             p = K.body_paragraph(doc, indent=False)
-            K.add_run(p, "Keywords: ", bold=True)
+            K.add_run(p, L["keywords"], bold=True)
             K.add_rich_text(p, payload)
         elif kind == "heading":
             K.heading(doc, resolve_refs(payload["text"], numbers), payload["level"], payload["numbered"])
         elif kind == "para":
             # a sentence continuing after a display equation ("where ...") is not indented, as in the template
-            p = K.body_paragraph(doc, indent=not (previous == "equation" and payload[:1].islower()))
-            K.add_rich_text(p, resolve_refs(payload, numbers))
+            continued = payload.startswith("^ ") or (previous == "equation" and payload[:1].islower())
+            p = K.body_paragraph(doc, indent=not continued)
+            K.add_rich_text(p, resolve_refs(payload[2:] if payload.startswith("^ ") else payload, numbers))
         elif kind == "equation":
             img, width = next(eq_iter)
-            K.equation_table(doc, img, width, numbers[payload["label"]])
+            K.equation_table(doc, img, width, numbers.get(payload["label"]))
         elif kind == "figure":
-            K.picture(doc, HERE / "figures" / payload["file"], payload["width"])
-            K.caption(doc, "Figure", numbers[payload["label"]], resolve_refs(payload["caption"], numbers))
+            K.picture(doc, HERE / L["figures"] / payload["file"], payload["width"])
+            K.caption(doc, L["figure"], numbers[payload["label"]], resolve_refs(payload["caption"], numbers),
+                      fmt=L["caption"])
         elif kind == "table":
-            K.caption(doc, "Table", numbers[payload["label"]], resolve_refs(payload["caption"], numbers))
+            K.caption(doc, L["table"], numbers[payload["label"]], resolve_refs(payload["caption"], numbers),
+                      above=True, fmt=L["caption"])
             header, *rows = [[resolve_refs(c, numbers) for c in r] for r in payload["rows"]]
             K.three_line_table(doc, header, rows, widths_cm=payload["widths"])
             K.body_paragraph(doc, indent=False)  # spacing after the table, as in the template
@@ -180,6 +197,8 @@ def build(content_path, out_docx, summary_path):
             for entry in payload:
                 K.reference_entry(doc, entry)
         previous = kind
+    if lang == "zh":
+        K.keep_line_end_punctuation(doc)
     doc.core_properties.title = ""
     doc.core_properties.author = ""
     doc.save(str(out_docx))
@@ -194,12 +213,15 @@ def to_pdf(docx_path):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--content", type=Path, default=HERE / "content.md")
+    ap.add_argument("--lang", choices=sorted(LANG), default="en")
+    ap.add_argument("--content", type=Path)
     ap.add_argument("--summary", type=Path, default=ROOT / "results" / "summary.json")
-    ap.add_argument("--out", type=Path, default=HERE / "Manuscript.docx")
+    ap.add_argument("--out", type=Path)
     ap.add_argument("--no-pdf", action="store_true")
     args = ap.parse_args()
-    numbers = build(args.content, args.out, args.summary)
+    args.content = args.content or HERE / LANG[args.lang]["content"]
+    args.out = args.out or HERE / LANG[args.lang]["out"]
+    numbers = build(args.content, args.out, args.summary, args.lang)
     print(f"wrote {args.out} ({sum(1 for k in numbers if k.startswith('eq'))} equations, "
           f"{sum(1 for k in numbers if k.startswith('fig'))} figures, {sum(1 for k in numbers if k.startswith('tab'))} tables)")
     if not args.no_pdf:

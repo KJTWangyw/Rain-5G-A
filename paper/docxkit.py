@@ -237,6 +237,26 @@ def no_grid_snap(paragraph):
     (spacing.addprevious if spacing is not None else pPr.append)(snap)
 
 
+def _overflow_punct(pPr):
+    if pPr.find(qn("w:overflowPunct")) is None:
+        anchor = next((pPr.find(qn(f"w:{tag}")) for tag in ("topLinePunct", "autoSpaceDE", "autoSpaceDN", "bidi",
+                                                               "adjustRightInd", "snapToGrid", "spacing", "ind", "jc")
+                       if pPr.find(qn(f"w:{tag}")) is not None), None)
+        el = parse_xml(f'<w:overflowPunct {nsdecls("w")} w:val="1"/>')
+        anchor.addprevious(el) if anchor is not None else pPr.append(el)
+
+
+def keep_line_end_punctuation(doc):
+    """Stop LibreOffice from dropping CJK punctuation that would hang past the right margin of justified lines.
+
+    LibreOffice 24.2 reads w:overflowPunct inverted: an explicit val="1" switches its hanging punctuation off,
+    while Word treats val="1" as its default. Call after the content is added.
+    """
+    _overflow_punct(doc.styles["Normal"].element.get_or_add_pPr())
+    for p in doc.element.body.iter(qn("w:p")):
+        _overflow_punct(p.get_or_add_pPr())
+
+
 def _set_grid(table, widths_twips):
     for col, w in zip(table._tbl.tblGrid.findall(qn("w:gridCol")), widths_twips):
         col.set(qn("w:w"), str(int(w)))
@@ -264,18 +284,20 @@ def equation_table(doc, image, width_cm, number):
         set_spacing(p, line=240, before=120, after=120)
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         no_grid_snap(p)
-    eq_p.add_run().add_picture(str(image), width=Cm(width_cm))
-    num_p.add_run(f"({number})")
+    eq_p.add_run().add_picture(str(image), width=Cm(min(width_cm, 13.0)))  # cell is 13.5 cm minus padding
+    if number is not None:
+        num_p.add_run(f"({number})")
     return table
 
 
 # ----------------------------------------------------------------------------- data tables and figures
 
-def caption(doc, label, number, text):
+def caption(doc, label, number, text, above=False, fmt="{label} {number}. "):
+    """Centred caption; table captions sit above their table and are kept with it."""
     p = body_paragraph(doc, indent=False, align="center")
     p.paragraph_format.keep_together = True
-    p.paragraph_format.keep_with_next = label == "Table"
-    add_run(p, f"{label} {number}. ")
+    p.paragraph_format.keep_with_next = above
+    add_run(p, fmt.format(label=label, number=number))
     add_rich_text(p, text)
     return p
 
