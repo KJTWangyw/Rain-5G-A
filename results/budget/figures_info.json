@@ -1,15 +1,16 @@
 {
  "example": {
-  "rule_median_reduction": 0.6928677870093862,
-  "picked_reduction": 0.6942715134623558,
-  "sublink": 533,
-  "length_km": 0.42314,
-  "freq_ghz": 37.296,
-  "start": "2015-08-25 04:15:00",
-  "hours": 6.916666666666667,
-  "radar_mm": 31.14525958088537,
-  "link_none_mm": 104.29774193885834,
-  "link_const_mm": 78.9736442492771,
-  "link_rain_mm": 35.31647147701666
+  "rule_median_reduction": 0.9135740450692593,
+  "picked_reduction": 0.9128075723763465,
+  "sublink": 371,
+  "length_km": 0.45866,
+  "freq_ghz": 38.584,
+  "start": "2015-08-25 05:00:00",
+  "hours": 6.25,
+  "radar_mm": 26.317303826411564,
+  "link_none_mm": 140.04328203365463,
+  "link_const_mm": 114.1364629389227,
+  "link_rain_mm": 61.561644705439384,
+  "link_kralt_mm": 19.5867195759753
  }
 }

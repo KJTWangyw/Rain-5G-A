@@ -1,21 +1,21 @@
 ::title
-面向5G-A的短距毫米波链路降雨感知误差预算：<br>长度无关偏移的识别与标定
+面向5G-A的短距毫米波链路降雨感知误差预算：<br>湿天线偏移的识别与校正
 
 ::abstract
-5G-A毫米波链路路径短，降雨衰减常只有零点几分贝，与路径长度无关的衰减误差会按路径长度的倒数放大为雨强误差。本文建立短距链路降雨反演的误差预算，把误差分为湿期长度无关偏移、晴空参考漂移、功率报告量化和导频估计噪声四类，给出量化报告的共享参考偏差和导频共享参考误差的解析式，并利用不同长度链路的跨链路回归分离长度无关偏移。基于OpenMRG数据集中{{n_use}}条26–40 GHz子链路与天气雷达的分析表明，长度无关偏移随雨强由{{W_low}} dB增至{{W_high}} dB，是0.5 km以下链路的主导误差；参考漂移与1 dB报告量化处于0.1–0.3 dB量级；导频估计噪声在毫秒级晴空参考下比后两者小一到两个数量级。以6–7月标定、8月检验，按雨强标定的偏移使0.5 km以下链路的小时雨强均方根误差降低{{ev_red_05}}%。5G-A短链路降雨感知的首要问题是长度无关偏移的标定，导频测量精度不是限制因素。
+5G-A毫米波链路路径短，降雨衰减常只有零点几分贝，与路径长度无关的衰减误差会按路径长度的倒数放大为雨强误差。本文建立短距链路降雨反演的误差预算，把误差分为湿期长度无关偏移、晴空参考漂移、功率报告量化和导频估计噪声，给出量化报告的共享参考偏差和导频共享参考误差的解析式，并用不同长度链路的跨链路回归识别长度无关偏移。基于OpenMRG数据集中{{n_use}}条26–40 GHz子链路、天气雷达和雨量计的分析表明：长度无关偏移随雨强增大，雨停后约半小时内消退到0.1 dB以下，且消退过程与链路长度无关，具有湿天线衰减的特征，是1 km以下链路的主导误差；参考漂移和1 dB报告量化处于0.1–0.3 dB量级；毫秒级晴空参考下导频估计噪声可以忽略。用随雨强变化的湿天线模型校正后，1 km以下链路相对雨量计的小时雨强均方根误差由{{eg_radar_none_le1}} mm/h降至{{eg_radar_kralt_le1}} mm/h，低于天气雷达的{{eg_none_radar_le1}} mm/h。5G-A短链路降雨感知的首要任务是校正湿天线偏移，导频测量精度不是限制因素。
 
 ::keywords
 5G-A；通感一体化；毫米波链路；降雨反演；湿天线衰减；误差预算。
 
 # 引言
 
-地面微波链路的雨致衰减提供路径平均的降雨信息。利用商用微波链路（CML）的接收电平测雨，已在城市和国家尺度得到验证（Messer et al., 2006；Leijnse et al., 2007；Overeem et al., 2011, 2013），并形成了干湿判别、基线估计、湿天线修正和雨强转换的处理流程（Overeem et al., 2016；Chwala & Kunstmann, 2019；Graf et al., 2020）。
+地面微波链路的雨致衰减提供路径平均的降雨信息。利用商用微波链路（CML）的接收电平测雨，已在城市和国家尺度得到验证（Messer et al., 2006；Leijnse et al., 2007；Overeem et al., 2011, 2013），并形成了干湿判别、基线估计、湿天线修正和雨强转换的处理流程（Schleiss & Berne, 2010；Overeem et al., 2016；Chwala & Kunstmann, 2019；Graf et al., 2020）。
 
-5G-A为降雨感知提供了更密集的毫米波链路。FR2频段的小站回传和固定无线接入链路多在1 km以内，频率高，对降雨敏感（Han et al., 2020）。通感一体化使基站可以直接利用解调参考信号（DM-RS）等导频的信道估计（Liu et al., 2022；3GPP, 2024），而标准测量报告中的参考信号接收功率（RSRP）以1 dB为步长上报（3GPP, 2026）。这使人自然地把测量分辨率和导频估计精度视为5G-A降雨感知的关键。
+5G-A为降雨感知提供了更密集的毫米波链路。FR2频段的小站回传和固定无线接入链路多在1 km以内，频率高，对降雨敏感（Han et al., 2020）。通感一体化使基站可以利用解调参考信号（DM-RS）等导频的信道估计（Liu et al., 2022；3GPP, 2024），也有研究把基站作为机会式天气雷达估计降雨（Tornielli Bellini et al., 2026）；而标准测量报告中的参考信号接收功率（RSRP）以1 dB为步长上报（3GPP, 2026）。这使人自然地把测量分辨率和导频估计精度视为5G-A链路降雨感知的关键。
 
-路径变短改变了误差的构成。雨致衰减与路径长度成正比，而湿天线衰减、晴空基线误差和功率量化误差与路径长度无关（Kharadly & Ross, 2001；Leijnse et al., 2008；Zinevich et al., 2010）。换算为雨强后，这些误差随路径缩短而放大。已有湿天线研究（Schleiss et al., 2013；Fencl et al., 2019；Pastorek et al., 2022）和误差来源试验（van Leth et al., 2018）主要针对数公里的回传链路或少数实验链路。对于0.1–1 km的链路，各误差项的相对大小以及导频级测量能带来多少改进，还缺少基于大量真实链路的定量结果。
+路径变短改变了误差的构成。雨致衰减与路径长度成正比，而湿天线衰减、晴空基线误差和功率量化误差与路径长度无关（Kharadly & Ross, 2001；Leijnse et al., 2008；Zinevich et al., 2010）。换算为雨强后，这些误差随路径缩短而放大。已有湿天线研究（Schleiss et al., 2013；Fencl et al., 2019；Pastorek et al., 2022）和误差来源试验（van Leth et al., 2018）主要针对数公里的回传链路或少数实验链路。对于0.1–1 km的链路，各误差项的相对大小、湿天线校正能否使其可用，以及导频级测量能带来多少改进，还缺少基于大量真实链路的定量结果。
 
-本文研究一个问题：在短距毫米波链路上，哪些与路径长度无关的误差决定降雨反演精度，各占多大比例，主导项能否从网络数据中标定。主要贡献有三点：（1）建立短距链路降雨反演的误差预算，给出量化报告的共享参考偏差解析式和导频共享参考误差的信息下界；（2）用OpenMRG数据集中{{n_use}}条26–40 GHz、{{L_min}}–{{L_max}} km的子链路定量各误差项，表明长度无关偏移随雨强增大并主导短链路误差，参考漂移和报告量化次之，导频估计噪声可以忽略；（3）利用链路长度差异的跨链路回归标定随雨强变化的偏移，并在独立月份中检验其效果。
+本文研究一个问题：在短距毫米波链路上，哪些与路径长度无关的误差决定降雨反演精度，主导项能否被识别和校正。主要贡献有三点：（1）建立短距链路降雨反演的误差预算，给出量化报告的共享参考偏差解析式和导频共享参考误差的信息下界，并分别用逐事件实测和NR链路仿真检验；（2）用OpenMRG数据集中{{n_use}}条26–40 GHz、{{L_min}}–{{L_max}} km的子链路，通过跨链路回归识别长度无关偏移，给出它随雨强和频率的变化以及雨停后的消退，证实其为湿天线衰减并主导1 km以下链路；（3）以雷达和雨量计为参考比较偏移校正方法，表明随雨强变化的湿天线模型使短链路的小时雨强优于雷达，而1 dB报告量化和导频噪声的影响很小。
 
 # 误差模型
 
@@ -61,13 +61,19 @@ $$\sigma_{\mathrm{ref}} = \frac{K}{\sqrt{2J\gamma_{\mathrm{r}}}},\quad \gamma_{\
 
 ^ 对剖面幅度估计器作一阶传播，其共享分量为$K^2/(2J\gamma_{\mathrm{r}}) + K^2/[J(\gamma_{\mathrm{r}} + \gamma_{\mathrm{t}})^2]$，在$\gamma_{\mathrm{r}} \gg 1$时与下界一致。导频估计在物理层以浮点数表示，不经过报告量化。
 
-## 2.4 利用链路长度差异识别偏移
+## 2.4 长度无关偏移的识别与校正
 
 同一城市的链路经历相近的降雨，雨致衰减与$kL$成正比，而$W$不随路径变化。按参考雨强（本文用雷达路径平均雨强）把湿期分钟分档，在第$b$档内对全部链路回归
 
 $$\bar{a}_{i,b} = W_b + \beta_b\,\bar{e}_{i,b}$$ {#eq:regress}
 
-^ 式中$\bar{a}_{i,b}$为链路$i$在该档的平均测得衰减，$\bar{e}_{i,b}$为按链路$i$的$k$、$\alpha$和$L$由雷达雨强计算的平均雨致衰减$kLR^{\alpha}$。截距$W_b$即长度无关偏移；参考降雨的乘性偏差只改变斜率$\beta_b$，不改变截距。把各档的$W_b$按档内平均雨强插值为单调函数$W(R)$，雨强由下式求解：
+^ 式中$\bar{a}_{i,b}$为链路$i$在该档的平均测得衰减，$\bar{e}_{i,b}$为按链路$i$的$k$、$\alpha$和$L$由雷达雨强计算的平均雨致衰减$kLR^{\alpha}$。截距$W_b$即长度无关偏移；参考降雨的乘性偏差只改变斜率$\beta_b$，不改变截距。雷达雨强与路径真实雨强之间存在采样和$Z$–$R$误差，同一档内的真实雨强较分散，$W_b$随雨强的变化因此被压平（回归稀释）。分档曲线$W(R)$适合诊断偏移的存在、量级和随雨强的变化。
+
+校正时比较三种偏移：常数偏移、分档曲线$W(R)$，以及随雨强变化的湿天线衰减模型KR-alt（Pastorek et al., 2022），后者源自Kharadly和Ross（2001）：
+
+$$W(R) = A_{\max}\left[1 - \mathrm{e}^{-dR^{\zeta}}\right]$$ {#eq:kralt}
+
+^ 本文采用文献参数$A_{\max}$ = {{kr_Amax}} dB、$\zeta$ = {{kr_zeta}}、$d$ = {{kr_d}}，不作重新标定。对随雨强变化的偏移，雨强由下式求解：
 
 $$W(\hat{R}) + kL\hat{R}^{\alpha} = \hat{A}$$ {#eq:invert}
 
@@ -77,18 +83,19 @@ $$W(\hat{R}) + kL\hat{R}^{\alpha} = \hat{A}$$ {#eq:invert}
 
 ## 3.1 OpenMRG数据
 
-OpenMRG数据集（Andersson et al., 2022）包含瑞典哥德堡728条子链路2015年6–8月的发射和接收电平（TSL、RSL），采样间隔10 s，分辨率约1/3 dB，并配有SMHI天气雷达和城市雨量计资料。本文选取24–40 GHz的{{n_sel}}条子链路（实际频率{{f_min}}–{{f_max}} GHz），其中{{n_use}}条（{{n_phys}}条物理链路）的湿期分钟数不少于600，用于分析。链路长度为{{L_min}}–{{L_max}} km，中位数{{L_med}} km，其中1 km以下{{n_short}}条，与5G-A毫米波链路的长度相当。主要设置见表@tab:data。
+OpenMRG数据集（Andersson et al., 2022）包含瑞典哥德堡728条子链路2015年6–8月的发射和接收电平（TSL、RSL），采样间隔10 s，分辨率约1/3 dB，并配有SMHI天气雷达和10个城市雨量计的1 min资料。本文选取24–40 GHz的{{n_sel}}条子链路（实际频率{{f_min}}–{{f_max}} GHz），其中{{n_use}}条（{{n_phys}}条物理链路）的湿期分钟数不少于600，用于分析。链路长度为{{L_min}}–{{L_max}} km，中位数{{L_med}} km，其中1 km以下{{n_short}}条，与5G-A毫米波链路的长度相当。主要设置见表@tab:data。
 
 ::table tab:data | 数据与处理设置 | 3.0,11.4
 项目 | 设置
 链路 | OpenMRG，2015年6–8月；24–40 GHz子链路{{n_sel}}条，分析{{n_use}}条（{{n_phys}}条物理链路）
 电平 | TSL、RSL，10 s采样，约1/3 dB分辨率，按1 min平均；衰减取TSL − RSL
-参考降雨 | SMHI雷达，2 km、5 min，$Z = 200R^{1.5}$，沿路径20点平均
+参考降雨 | SMHI雷达，2 km、5 min，$Z = 200R^{1.5}$，沿路径20点平均；10个城市雨量计，1 min
 湿期 | 雷达路径雨强在前后30 min内超过0.1 mm/h；连续湿期构成事件（不短于10 min）
 晴空参考 | 事件开始前6 h内干期分钟的平均衰减，不少于60 min，在事件内保持不变
 雨强分档 | 0、0.1、0.5、1、2、5、10、200 mm/h
 报告量化 | 10 s RSL按1 dB和2 dB取整，各子链路的网格偏置随机
-标定与检验 | 6–7月标定，8月检验
+偏移校正 | 常数偏移、分档$W(R)$（6–7月标定）；KR-alt（文献参数）
+检验 | 8月；雷达参考用全部子链路，雨量计参考用距雨量计{{gauge_km}} km以内的子链路
 区间估计 | 以物理链路为单元的集群自助法，2000次
 ::end
 
@@ -96,9 +103,11 @@ OpenMRG数据集（Andersson et al., 2022）包含瑞典哥德堡728条子链路
 
 信号电平按1 min平均，衰减取TSL − RSL。雷达反射率按$Z = 200R^{1.5}$换算为雨强，沿路径等间隔取20个点平均。湿期由雷达判别，使各试验的干湿分类完全相同，从而只比较测量误差和偏移。每个事件以开始前6 h内干期分钟的平均衰减作为晴空参考，事件内各分钟减去同一参考得到降雨期衰减。共得到{{n_events}}个事件，持续时间的中位数为{{ev_med_min}} min。
 
+为检验不依赖雷达的应用情形，另用链路自身信号判别干湿（Schleiss & Berne, 2010）：衰减的{{lm_window}} min滑动标准差超过阈值时记为湿期，阈值按6–7月的湿期比例为每条子链路确定，8月不再使用雷达。
+
 ## 3.3 试验设计
 
-（1）长度无关偏移。按式(@eq:regress)对全部湿期分钟和7个雨强档分别回归，以物理链路为单元做集群自助，得到95%区间。另以$k_iL_i$代替$\bar{e}_{i,b}$作不依赖雷达雨强数值的回归，以Theil–Sen回归检验离群链路的影响，并检验湿期边界（15、30、60 min）和参考窗口（3、6、12 h）的影响。
+（1）长度无关偏移。按式(@eq:regress)对全部湿期分钟和7个雨强档分别回归，以物理链路为单元做集群自助，得到95%区间。另以$k_iL_i$代替$\bar{e}_{i,b}$作不依赖雷达雨强数值的回归，以Theil–Sen回归检验离群链路的影响，并检验湿期边界（15、30、60 min）和参考窗口（3、6、12 h）的影响。对每个事件，从雷达路径雨强最后一次超过0.1 mm/h起，保持事件参考，跟踪其后90 min内路径无雨时的衰减，得到雨停后的消退曲线。
 
 （2）参考漂移。在干期中重现一次降雨事件：以6 h参考预测其后一个完整干期小时的衰减（真值为0），参考窗口结束至检验小时结束的时间取1、2、4、6 h，共{{n_dry_hours}}个检验小时。
 
@@ -106,21 +115,23 @@ OpenMRG数据集（Andersson et al., 2022）包含瑞典哥德堡728条子链路
 
 （4）导频仿真。在NR DM-RS时域链路中（子载波间隔120 kHz，1024点FFT，66个资源块，固定多径），取信噪比5、15、25 dB和参考长度1、8、80个时隙；每种条件生成400个参考，每个参考复用于128个降雨时隙（衰减0.5 dB），用同一参考下估计值的协方差估计共享分量。
 
-（5）偏移标定的效果。用6–7月数据标定常数偏移和$W(R)$，在8月比较三种处理的小时雨强与雷达路径平均雨强：不扣除偏移、扣除常数偏移、按式(@eq:invert)扣除$W(R)$。对1 dB和2 dB报告重复$W(R)$处理。
+（5）偏移校正的效果。常数偏移和分档$W(R)$用6–7月数据标定，KR-alt采用文献参数；在8月比较各校正的小时雨强。以雷达路径平均雨强为参考时使用全部子链路；以雨量计为参考时使用距最近雨量计不超过{{gauge_km}} km的{{g_n_le1}}条1 km以下和{{g_n_gt1}}条1 km以上子链路，并同时评价雷达本身。另对链路自身判别干湿和1 dB、2 dB报告重复KR-alt校正。各长度组以子链路的中位数报告，降幅的区间按物理链路集群自助计算。
 
 # 结果
 
 ## 4.1 长度无关偏移主导短链路误差
 
-图@fig:example为一条{{ex_L}} km、{{ex_f}} GHz子链路在一次{{ex_hours}} h降雨中的衰减。该子链路按固定规则选取：其8月小时雨强均方根误差在扣除$W(R)$后的降幅最接近0.5 km以下链路的中位数（{{ex_red_med}}%），事件为其8月雷达累计雨量最大的一次。测得衰减始终明显高于雷达对应的雨致衰减，差值随雨强增大；加上$W(R)$后两者基本吻合。该事件雷达路径累计雨量为{{ex_radar_mm}} mm，链路在不扣除偏移、扣除常数偏移和扣除$W(R)$时分别为{{ex_link_none_mm}}、{{ex_link_const_mm}}和{{ex_link_rain_mm}} mm。
+图@fig:example为一条{{ex_L}} km、{{ex_f}} GHz子链路在一次{{ex_hours}} h降雨中的衰减。该子链路按固定规则选取：其8月小时雨强均方根误差在KR-alt校正后的降幅最接近0.5 km以下链路的中位数（{{ex_red_med}}%），事件为其8月雷达累计雨量最大的一次。测得衰减始终明显高于雷达对应的雨致衰减，差值随雨强增大；加上KR-alt湿天线衰减后，两者基本吻合。该事件雷达路径累计雨量为{{ex_radar_mm}} mm；链路在不扣除偏移、扣除常数偏移、扣除分档$W(R)$和扣除KR-alt湿天线衰减时分别为{{ex_link_none_mm}}、{{ex_link_const_mm}}、{{ex_link_rain_mm}}和{{ex_link_kralt_mm}} mm。
 
 跨链路回归给出湿期平均的长度无关偏移$W$ = {{W}} dB（95%区间{{W_ci}} dB），斜率$\beta$ = {{beta}}（{{beta_ci}}）（图@fig:offset(a)）。不依赖雷达雨强数值的回归给出{{W_rf}} dB（{{W_rf_ci}} dB），Theil–Sen回归给出{{W_ts}} dB。26–30、32–34和37–40 GHz三个频段分别为{{W_26_30}}、{{W_32_34}}和{{W_37_40}} dB，37–40 GHz最大。改变湿期边界和参考窗口时，$W$在{{W_sens}} dB之间变化。湿期平均衰减中，这一偏移在0.5 km以下链路占{{share_05}}%，0.5–1 km占{{share_1}}%，4 km以上仍占{{share_4}}%。
 
+偏移随雨强显著增大（图@fig:offset(b)）：雷达雨强低于{{bin_low}} mm/h时为{{W_low}} dB，超过{{bin_high}} mm/h时达{{W_high}} dB（95%区间{{W_high_ci}} dB）。1 mm/h时$W$ = {{W_at_1}} dB，是0.5 km以下链路雨致衰减的{{W_over_rain_1_05}}倍。只有雨强超过一定值，雨致衰减才大于偏移；这一临界雨强的中位数在0.5 km以下链路为{{Rc_05}} mm/h，0.5–1 km为{{Rc_1}} mm/h，1–2 km为{{Rc_2}} mm/h，4 km以上仅{{Rc_20}} mm/h。在除最高档以外的各档，按$k_iL_i$回归和Theil–Sen回归的截距与雷达回归相差不超过{{W_alt_maxdiff_low}} dB。在0.1–2 mm/h各档，KR-alt模型比分档估计高{{kr_minus_bin_lo}}–{{kr_minus_bin_hi}} dB，最高档为分档估计的{{kr_over_bin_top}}倍，与回归稀释的方向一致。
+
 ![一条短链路的降雨事件（子链路{{ex_sublink}}，{{ex_date}}）。(a) 衰减；(b) 雨强。灰底为湿期。](fig1_example.png){#fig:example width=13.2}
 
-偏移随雨强显著增大（图@fig:offset(b)）：雷达雨强低于{{bin_low}} mm/h时为{{W_low}} dB，超过{{bin_high}} mm/h时达{{W_high}} dB（95%区间{{W_high_ci}} dB）。1 mm/h时$W$ = {{W_at_1}} dB，是0.5 km以下链路雨致衰减的{{W_over_rain_1_05}}倍。只有雨强超过一定值，雨致衰减才大于偏移；这一临界雨强的中位数在0.5 km以下链路为{{Rc_05}} mm/h，0.5–1 km为{{Rc_1}} mm/h，1–2 km为{{Rc_2}} mm/h，4 km以上仅{{Rc_20}} mm/h。在除最高档以外的各档，按$k_iL_i$回归和Theil–Sen回归的截距与雷达回归相差不超过{{W_alt_maxdiff_low}} dB。
+雨停后的消退（图@fig:offset(c)）提供了偏移来源的直接证据。雷达路径雨强降到0.1 mm/h以下后的前5 min，各子链路残余衰减的中位数为{{dry_first}} dB，在雨停后{{dry_half_lo}}–{{dry_half_hi}} min的分档中减半，在{{dry_below01_lo}}–{{dry_below01_hi}} min的分档中降到0.1 dB以下，60 min时为{{dry_60}} dB。1 km以下、1–4 km和4 km以上三组链路的消退曲线在雨停10 min后相差不超过{{dry_spread_after10}} dB。残余路径降雨引起的衰减会随链路长度增加，而这一消退与长度无关，符合天线和天线罩上水膜的蒸发和流失。
 
-![长度无关偏移。(a) 各子链路湿期平均衰减与雷达对应雨致衰减，直线为跨链路回归，截距即$W$；(b) 各雨强档的截距$W(R)$（阴影为95%区间），细线为28 GHz垂直极化下0.3、1、3 km路径的雨致衰减$kLR^{\alpha}$。](fig2_offset.png){#fig:offset width=14.5}
+![长度无关偏移。(a) 各子链路湿期平均衰减与雷达对应雨致衰减，直线为跨链路回归，截距即$W$；(b) 各雨强档的截距$W(R)$（阴影为95%区间）、KR-alt模型和28 GHz垂直极化下0.3 km、1 km路径的雨致衰减；(c) 雷达雨停后残余衰减的中位数。](fig2_offset.png){#fig:offset width=14.6}
 
 ## 4.2 参考漂移与报告量化
 
@@ -136,7 +147,7 @@ OpenMRG数据集（Andersson et al., 2022）包含瑞典哥德堡728条子链路
 
 ![导频测量的共享参考误差随晴空参考时长的变化。线为闭式结果，点为NR DM-RS链路仿真（误差线为95%区间）；水平线为OpenMRG中的长度无关偏移（1 mm/h）、1 h参考漂移和1 dB报告的事件级量化误差。](fig4_pilot.png){#fig:pilot width=10.5}
 
-## 4.4 误差预算与偏移标定的效果
+## 4.4 误差预算
 
 表@tab:budget以1 mm/h雨强为例，把各误差项换算为等效雨强。0.5 km以下链路上，雨致衰减只有{{b_L05_signal_db}} dB，长度无关偏移相当于{{b_L05_W1_mmh}} mm/h；扣除平均偏移后，链路间残余偏移的离散仍相当于{{b_L05_resid_mmh}} mm/h；参考漂移和1 dB量化分别相当于{{b_L05_drift_mmh}}和{{b_L05_quant_mmh}} mm/h；导频噪声只相当于{{b_L05_pilot_mmh}} mm/h。路径越长，各项越小。
 
@@ -149,33 +160,53 @@ OpenMRG数据集（Andersson et al., 2022）包含瑞典哥德堡728条子链路
 >4 | {{b_L20_n}} | {{b_L20_signal_db}} | {{b_L20_W1_mmh}} | {{b_L20_resid_mmh}} | {{b_L20_drift_mmh}} | {{b_L20_quant_mmh}} | {{b_L20_pilot_mmh}}
 ::end
 
-^ 注：长度无关偏移取$W$(1 mm/h) = {{W_at_1}} dB；残余偏移取1–2 mm/h档内链路间的离散{{resid_1}} dB；参考漂移为1 h干期检验的标准差；1 dB量化为事件级误差的均方根；导频噪声为15 dB、10 ms参考下的共享误差{{pilot_sd_15_10ms}} dB。
+^ 注：长度无关偏移取分档$W$(1 mm/h) = {{W_at_1}} dB（KR-alt为{{kr_at_1}} dB）；残余偏移取1–2 mm/h档内链路间的离散{{resid_1}} dB；参考漂移为1 h干期检验的标准差；1 dB量化为事件级误差的均方根；导频噪声为15 dB、10 ms参考下的共享误差{{pilot_sd_15_10ms}} dB。
 
-8月的独立检验中（图@fig:eval），扣除$W(R)$使0.5 km以下链路的小时雨强均方根误差由{{ev_rmse_none_05}} mm/h降至{{ev_rmse_rain_05}} mm/h，降低{{ev_red_05}}%；0.5–1 km和1–2 km分别降低{{ev_red_1}}%和{{ev_red_2}}%。扣除常数偏移只能降至{{ev_rmse_constant_05}} mm/h。0.5 km以下链路的累计雨量比（链路/雷达）由{{ev_ratio_none_05}}降至{{ev_ratio_rain_05}}，4 km以上由{{ev_ratio_none_4}}降至{{ev_ratio_rain_4}}。小时相关系数基本不变（0.5 km以下为{{ev_r_none_05}}和{{ev_r_rain_05}}），偏移造成的主要是系统偏差。扣除$W(R)$后，1 dB报告使各长度组的均方根误差变化{{q1_inc_range}}，2 dB报告变化{{q2_inc_range}}。短链路的累计雨量仍然偏高（0.5 km以下为{{ev_ratio_rain_05}}倍），说明残余偏移和参考漂移（表@tab:budget）在短链路上仍不可忽略。
+## 4.5 湿天线校正的效果
 
-![8月的小时雨强检验。(a) 均方根误差；(b) 链路与雷达的累计雨量比。点为各长度组子链路的中位数；偏移在6–7月标定。](fig5_evaluation.png){#fig:eval width=14.5}
+以雷达为参考时（表@tab:eval，图@fig:eval(a)），KR-alt校正使0.5 km以下链路的8月小时雨强均方根误差由{{er_radar_none_L05}} mm/h降至{{er_radar_kralt_L05}} mm/h，降幅中位数{{red_kr_L05}}%（95%区间{{red_kr_L05_ci}}%），{{impr_kr_L05}}%的子链路得到改善；0.5–1 km和1–2 km分别降低{{red_kr_L1}}%和{{red_kr_L2}}%，4 km以上降低{{red_kr_L20}}%。常数偏移只降低{{red_const_L20}}%–{{red_const_L05}}%。分档$W(R)$介于两者之间（0.5 km以下为{{er_radar_rain_L05}} mm/h），与第2.4节的回归稀释一致。0.5 km以下链路的累计雨量比（链路/雷达）由{{eq_radar_none_L05}}降至{{eq_radar_kralt_L05}}。改用链路自身判别干湿后（湿期命中率{{lm_hit}}%，误判率{{lm_false}}%），KR-alt的均方根误差几乎不变（0.5 km以下为{{er_link_kralt_L05}} mm/h）。
+
+::table tab:eval | 8月小时雨强的均方根误差（mm/h，各子链路的中位数） | 3.7,1.3,1.3,1.3,1.3,1.5,1.5,1.75
+方法 | ≤0.5 km | 0.5–1 km | 1–2 km | >4 km | ≤1 km† | >1 km† | 雨量比†
+不扣除偏移 | {{er_radar_none_L05}} | {{er_radar_none_L1}} | {{er_radar_none_L2}} | {{er_radar_none_L20}} | {{eg_radar_none_le1}} | {{eg_radar_none_gt1}} | {{egq_radar_none_le1}}
+常数偏移 | {{er_radar_constant_L05}} | {{er_radar_constant_L1}} | {{er_radar_constant_L2}} | {{er_radar_constant_L20}} | {{eg_radar_constant_le1}} | {{eg_radar_constant_gt1}} | {{egq_radar_constant_le1}}
+分档$W(R)$ | {{er_radar_rain_L05}} | {{er_radar_rain_L1}} | {{er_radar_rain_L2}} | {{er_radar_rain_L20}} | {{eg_radar_rain_le1}} | {{eg_radar_rain_gt1}} | {{egq_radar_rain_le1}}
+KR-alt | {{er_radar_kralt_L05}} | {{er_radar_kralt_L1}} | {{er_radar_kralt_L2}} | {{er_radar_kralt_L20}} | {{eg_radar_kralt_le1}} | {{eg_radar_kralt_gt1}} | {{egq_radar_kralt_le1}}
+KR-alt，链路判别干湿 | {{er_link_kralt_L05}} | {{er_link_kralt_L1}} | {{er_link_kralt_L2}} | {{er_link_kralt_L20}} | — | — | —
+KR-alt，1 dB报告 | {{er_radar_q1_kralt_L05}} | {{er_radar_q1_kralt_L1}} | {{er_radar_q1_kralt_L2}} | {{er_radar_q1_kralt_L20}} | {{eg_radar_q1_kralt_le1}} | {{eg_radar_q1_kralt_gt1}} | {{egq_radar_q1_kralt_le1}}
+KR-alt，2 dB报告 | {{er_radar_q2_kralt_L05}} | {{er_radar_q2_kralt_L1}} | {{er_radar_q2_kralt_L2}} | {{er_radar_q2_kralt_L20}} | {{eg_radar_q2_kralt_le1}} | {{eg_radar_q2_kralt_gt1}} | {{egq_radar_q2_kralt_le1}}
+天气雷达 | — | — | — | — | {{eg_none_radar_le1}} | {{eg_none_radar_gt1}} | {{egq_none_radar_le1}}
+::end
+
+^ 注：不带†的列以雷达路径平均雨强为参考；带†的列以距子链路{{gauge_km}} km以内的雨量计为参考，雨量比为1 km以下子链路的累计雨量之比（估计/雨量计）。
+
+以雨量计为参考时（图@fig:eval(b)），1 km以下链路经KR-alt校正后的均方根误差为{{eg_radar_kralt_le1}} mm/h，低于雷达的{{eg_none_radar_le1}} mm/h；在{{g_pairs_le1}}条物理链路中有{{g_kr_better_le1}}条优于雷达（符号检验$p$ = ${{g_sign_p_le1}}$），累计雨量比为{{egq_radar_kralt_le1}}。1 km以上链路为{{eg_radar_kralt_gt1}} mm/h，{{g_pairs_gt1}}条物理链路中{{g_kr_better_gt1}}条优于雷达。不扣除偏移时，1 km以下链路的误差为{{eg_radar_none_le1}} mm/h，约为雷达的10倍。
+
+湿天线校正后，报告分辨率的影响仍然很小。以雷达为参考，1 dB报告使0.5 km以下链路的均方根误差增加{{kr_q1_inc_05}}%，2 dB报告增加{{kr_q2_inc_05}}%；以雨量计为参考，1 km以下链路分别为{{eg_radar_q1_kralt_le1}}和{{eg_radar_q2_kralt_le1}} mm/h（原始分辨率为{{eg_radar_kralt_le1}} mm/h）。
+
+![8月的小时雨强检验。(a) 以雷达为参考，点为各长度组子链路的中位数；(b) 以{{gauge_km}} km以内的雨量计为参考，括号内为子链路数。常数偏移和分档$W(R)$在6–7月标定，KR-alt采用文献参数。](fig5_evaluation.png){#fig:eval width=14.5}
 
 # 讨论
 
 ## 5.1 对5G-A降雨感知的含义
 
-在0.1–1 km的毫米波链路上，误差的主次依次为：随雨强变化的长度无关偏移，链路间的残余偏移和参考漂移，功率报告量化，导频估计噪声。前三类都在事件内共享，提高测量分辨率不能消除。偏移标定后，1 dB报告对小时雨强的影响只有几个百分点，2 dB报告在短链路上的影响增至十几个百分点。导频级测量去除了报告量化，其噪声在毫秒级参考下可以忽略；进一步提高导频估计精度，对雨强精度几乎没有贡献。
+在0.1–1 km的毫米波链路上，误差的主次依次为：随雨强变化的湿天线偏移，链路间的残余偏移和参考漂移，功率报告量化，导频估计噪声。湿天线偏移在1 mm/h时相当于雨致衰减的数倍，必须随雨强校正；常数偏移只能去掉其中一小部分。KR-alt的参数来自其他城市的链路观测（Pastorek et al., 2022），在本文26–40 GHz、0.14–11 km的链路上不经重新标定即可把1 km以下链路的误差降到雷达以下。分档$W(R)$受回归稀释影响，宜用于诊断：跨链路回归的截距和雨停后的消退曲线只依赖网络自身的衰减数据和降雨的时间信息，可以用来检验湿天线模型是否适用于新的设备和天线罩。
 
-由式(@eq:req)，在雨强$R$处要达到雨强误差$\varepsilon$，允许的共享衰减误差约为$\alpha kLR^{\alpha-1}\varepsilon$。28 GHz、1 mm/h、$\varepsilon$ = 1 mm/h时，0.3 km链路允许{{sigma_req_03}} dB，1 km链路允许{{sigma_req_10}} dB；而本文测得的1 h参考漂移为{{drift_1h}} dB，残余偏移离散为{{resid_1}} dB。因此，0.5 km以下链路的降雨感知需要把偏移和漂移控制在0.1 dB以下，这比提高导频精度更关键。
+校正湿天线偏移后，1 dB报告对小时雨强的影响只有几个百分点，2 dB报告在短链路上的影响更明显。毫秒级晴空参考下的导频噪声比其他误差小一到两个数量级。因此，就雨强精度而言，5G-A链路降雨感知的投入应首先放在湿天线校正和参考漂移控制上，提高导频估计精度的收益很小。导频级测量的价值在于避免报告量化，并有可能为湿天线消退等分钟级过程提供更密的观测。
 
-5G-A基站连接距离不同的终端和回传节点，网络中天然存在路径长度的差异。式(@eq:regress)的截距不受参考降雨乘性偏差的影响；对常数偏移，不依赖雷达雨强数值的回归给出相同结果（{{W_rf}} dB对{{W}} dB）。这为在5G-A网络中自标定长度无关偏移提供了条件。
+由式(@eq:req)，在雨强$R$处要达到雨强误差$\varepsilon$，允许的共享衰减误差约为$\alpha kLR^{\alpha-1}\varepsilon$。28 GHz、1 mm/h、$\varepsilon$ = 1 mm/h时，0.3 km链路允许{{sigma_req_03}} dB，1 km链路允许{{sigma_req_10}} dB；而本文测得的1 h参考漂移为{{drift_1h}} dB。0.5 km以下链路要在弱降雨中达到1 mm/h的精度，还需要把参考漂移控制在0.1 dB以下，例如缩短参考与降雨之间的间隔。
 
 ## 5.2 局限与后续工作
 
-（1）OpenMRG为回传链路设备，其天线和天线罩与5G-A有源阵列不同，偏移的量值需要在5G-A链路上重新标定，但式(@eq:regress)的方法可以直接使用。（2）雷达的2 km、5 min采样和$Z$–$R$关系误差进入$\beta_b$和8月检验；截距对乘性偏差不敏感，但会受加性偏差影响。（3）干期检验中的漂移包含CML接收电平检测的误差，导频测量能否减小这一部分，需要5G-A实测数据检验。（4）数据只覆盖一个城市的一个夏季；6–7月标定的偏移在最高雨强档为{{W_cal_top}} dB，低于全时段的{{W_high}} dB。
+（1）OpenMRG为回传链路设备，其天线和天线罩与5G-A有源阵列不同，湿天线偏移的量值和消退时间需要在5G-A链路上重新检验，但跨链路回归和消退曲线的方法可以直接使用。（2）雷达的2 km、5 min采样会进入分档$W(R)$和以雷达为参考的检验；雨量计是点观测，与路径平均存在代表性差异，本文只用距其1 km以内的子链路。（3）KR-alt采用文献参数，在8月以外和更强降雨下的表现有待更长数据检验。（4）干期检验中的漂移包含CML接收电平检测的误差，导频测量能否减小这一部分，需要5G-A实测数据检验。（5）数据只覆盖一个城市的一个夏季。
 
 # 结论
 
-（1）短距毫米波链路降雨反演的主导误差是随雨强增大的长度无关偏移。OpenMRG的{{n_use}}条26–40 GHz子链路中，偏移由{{W_low}} dB增至{{W_high}} dB，在0.5 km以下链路占湿期平均衰减的{{share_05}}%。
+（1）短距毫米波链路降雨反演的主导误差是湿天线偏移。OpenMRG的{{n_use}}条26–40 GHz子链路中，跨链路回归给出的长度无关偏移随雨强由{{W_low}} dB增至{{W_high}} dB，在0.5 km以下链路占湿期平均衰减的{{share_05}}%；雨停后它在约半小时内消退到0.1 dB以下，且消退与链路长度无关。
 
-（2）参考漂移（1 h为{{drift_1h}} dB）和1 dB报告量化（事件级{{q1_tot_rms}} dB）是次要的共享误差，其中量化误差主要来自晴空参考，可由式(@eq:bias)逐事件预测。毫秒级参考下导频测量的共享误差约为{{pilot_sd_15_10ms}} dB，不构成限制。
+（2）用随雨强变化的湿天线模型校正后，0.5 km以下链路以雷达为参考的小时雨强均方根误差降低{{red_kr_L05}}%；1 km以下链路以雨量计为参考的误差为{{eg_radar_kralt_le1}} mm/h，低于天气雷达的{{eg_none_radar_le1}} mm/h。常数偏移校正不能达到这一效果。
 
-（3）利用链路长度差异的跨链路回归可以标定随雨强变化的偏移。在独立月份中，它使0.5 km以下链路的小时雨强均方根误差降低{{ev_red_05}}%。5G-A短链路降雨感知应优先标定长度无关偏移并控制参考漂移。
+（3）参考漂移（1 h为{{drift_1h}} dB）和1 dB报告量化（事件级{{q1_tot_rms}} dB）是次要的共享误差，其中量化误差主要来自晴空参考，可由式(@eq:bias)逐事件预测；湿天线校正后，1 dB报告只使误差增加几个百分点。毫秒级参考下导频测量的共享误差约为{{pilot_sd_15_10ms}} dB，不构成限制。5G-A短链路降雨感知应首先校正湿天线偏移并控制参考漂移。
 
 #* 数据与代码可用性
 
@@ -202,7 +233,9 @@ Overeem, A., Leijnse, H., & Uijlenhoet, R. (2011). Measuring urban rainfall usin
 Overeem, A., Leijnse, H., & Uijlenhoet, R. (2013). Country-wide rainfall maps from cellular communication networks. Proceedings of the National Academy of Sciences, 110(8), 2741-2745.
 Overeem, A., Leijnse, H., & Uijlenhoet, R. (2016). Retrieval algorithm for rainfall mapping from microwave links in a cellular communication network. Atmospheric Measurement Techniques, 9(5), 2425-2444.
 Pastorek, J., Fencl, M., Rieckermann, J., & Bareš, V. (2022). Precipitation estimates from commercial microwave links: Practical approaches to wet-antenna correction. IEEE Transactions on Geoscience and Remote Sensing, 60, 1-9.
+Schleiss, M., & Berne, A. (2010). Identification of dry and rainy periods using telecommunication microwave links. IEEE Geoscience and Remote Sensing Letters, 7(3), 611-615.
 Schleiss, M., Rieckermann, J., & Berne, A. (2013). Quantification and modeling of wet-antenna attenuation for commercial microwave links. IEEE Geoscience and Remote Sensing Letters, 10(5), 1195-1199.
+Tornielli Bellini, D., Montopoli, M., Tagliaferri, D., Baldini, L., Adirosi, E., Duque, S., Resteghini, L., & Spagnolini, U. (2026). Mobile radio networks and weather radars dualism: Rainfall measurement revolution in densely populated areas. arXiv:2603.19153.
 van Leth, T. C., Overeem, A., Leijnse, H., & Uijlenhoet, R. (2018). A measurement campaign to assess sources of error in microwave link rainfall estimation. Atmospheric Measurement Techniques, 11(8), 4645-4669.
 Widrow, B., & Kollár, I. (2008). Quantization noise: Roundoff error in digital computation, signal processing, control, and communications. Cambridge University Press.
 Zinevich, A., Messer, H., & Alpert, P. (2010). Prediction of rainfall intensity measurement errors using commercial microwave communication links. Atmospheric Measurement Techniques, 3(5), 1385-1402.
