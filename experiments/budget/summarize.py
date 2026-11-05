@@ -45,6 +45,121 @@ def req(db, kL, alpha):
     return (np.asarray(db, dtype=float) / kL) ** (1.0 / alpha)
 
 
+def cluster_ci(values, clusters, stat, draws=2000, seed=20261108):
+    """95% interval of ``stat`` over resamples of whole clusters (physical links)."""
+    rng = np.random.default_rng(seed)
+    values, clusters = np.asarray(values), np.asarray(clusters)
+    groups = [np.flatnonzero(clusters == c) for c in np.unique(clusters)]
+    out = [stat(values[np.concatenate([groups[i] for i in rng.integers(0, len(groups), len(groups))])])
+           for _ in range(draws)]
+    return np.percentile(out, [2.5, 97.5])
+
+
+def sign_test(diff):
+    """Two-sided exact sign test p-value (zeros dropped)."""
+    from math import comb
+    d = np.asarray(diff)
+    d = d[d != 0]
+    n, k = len(d), int(np.sum(d > 0))
+    tail = sum(comb(n, i) for i in range(0, min(k, n - k) + 1))
+    return min(1.0, 2.0 * tail / 2 ** n)
+
+
+def extension_summary(use):
+    """Numbers of the drying, correction-model, link-classification and gauge analyses."""
+    S = {}
+    ext = CFG["extension"]
+    tags = ["L05", "L1", "L2", "L4", "L20"]
+    # drying after the radar rain on the path has ended
+    d = pd.read_csv(RES / "drying.csv").merge(use[["j", "length_km"]], on="j")
+    d = d[d.n >= 5]
+    med = d.groupby("lag_min")["mean"].median()
+    S["dry_first"] = f(med.iloc[0])
+    S["dry_30"] = f(float(med[med.index >= 30].iloc[0]))
+    S["dry_60"] = f(float(med[med.index >= 60].iloc[0]), 3)
+    w = ext["drying_bin_min"] / 2.0
+    half = float(med.index[np.argmax(med.values < med.iloc[0] / 2)])
+    b01 = float(med.index[np.argmax(med.values < 0.1)])
+    S["dry_half_lo"], S["dry_half_hi"] = f"{half - w:g}", f"{half + w:g}"
+    S["dry_below01_lo"], S["dry_below01_hi"] = f"{b01 - w:g}", f"{b01 + w:g}"
+    d["c3"] = pd.cut(d.length_km, [0, 1, 4, 20], labels=["short", "mid", "long"])
+    m3 = d.groupby(["lag_min", "c3"], observed=True)["mean"].median().unstack()
+    for c in ("short", "mid", "long"):
+        S[f"dry_first_{c}"] = f(m3[c].iloc[0])
+    late = m3[m3.index >= 10]
+    S["dry_spread_after10"] = f(float((late.max(axis=1) - late.min(axis=1)).max()), 2)
+    S["drying_curve"] = m3.round(4).reset_index().to_dict("records")
+    S["n_dry_links"] = int(d.j.nunique())
+    # KR-alt literature curve
+    p = ext["kralt"]
+    kr = lambda R: p["A_max"] * (1 - np.exp(-p["d"] * R ** p["zeta"]))  # noqa: E731
+    S["kr_Amax"], S["kr_zeta"], S["kr_d"] = f"{p['A_max']:g}", f"{p['zeta']:g}", f"{p['d']:g}"
+    S["kr_at_1"], S["kr_at_5"] = f(kr(1.0)), f(kr(5.0))
+    full = pd.read_csv(RES / "offset_curve.csv")
+    full = full[(full.variant == "native") & (full.period == "full")].sort_values("bin")
+    mid = full[(full.R > 0.1) & (full.R < 2)]
+    diff = kr(mid.R.values) - mid.W.values
+    S["kr_minus_bin_lo"], S["kr_minus_bin_hi"] = f(diff.min()), f(diff.max())
+    S["kr_over_bin_top"] = f(kr(full.R.iloc[-1]) / full.W.iloc[-1], 1)
+    # evaluation against radar (all usable sub-links) and gauges (sub-links within gauge_km of a city gauge)
+    e = pd.read_csv(RES / "evaluation_ext.csv").merge(use[["j", "length_km", "cls"]], on="j")
+    e["ratio"] = e.acc_est / e.acc_ref
+    rad = e[e.ref == "radar"]
+    cls_order = list(rad.cls.cat.categories) if hasattr(rad.cls, "cat") else sorted(rad.cls.unique())
+    tab = rad.groupby(["cls", "mask", "corr"], observed=True).agg(rmse=("rmse", "median"), ratio=("ratio", "median"),
+                                                                 r=("r", "median"), n=("j", "size")).reset_index()
+    S["eval_radar"] = tab.round(4).assign(cls=tab.cls.astype(str)).to_dict("records")
+    for (cls, mask, corr), row in tab.set_index(["cls", "mask", "corr"]).iterrows():
+        t = tags[cls_order.index(cls)]
+        S[f"er_{mask}_{corr}_{t}"] = f(row.rmse)
+        S[f"eq_{mask}_{corr}_{t}"] = f(row.ratio)
+    piv = rad[rad["mask"] == "radar"].pivot_table(index=["j", "Link", "cls"], columns="corr", values="rmse",
+                                                   observed=True).reset_index()
+    for i, cls in enumerate(cls_order):
+        g = piv[piv.cls == cls].dropna(subset=["none", "kralt"])
+        red = 1 - g.kralt / g.none
+        lo, hi = cluster_ci(red, g.Link, np.median)
+        S[f"red_kr_{tags[i]}"], S[f"red_kr_{tags[i]}_ci"] = pct(np.median(red)), f"{100 * lo:.0f}–{100 * hi:.0f}"
+        S[f"impr_kr_{tags[i]}"] = pct(np.mean(g.kralt < g.none))
+        red_c = 1 - g.constant / g.none
+        S[f"red_const_{tags[i]}"] = pct(np.median(red_c))
+    q = rad[(rad["corr"] == "kralt") & rad["mask"].isin(["radar", "radar_q1", "radar_q2"])]
+    qp = q.pivot_table(index=["j", "cls"], columns="mask", values="rmse", observed=True).dropna().reset_index()
+    for step in ("q1", "q2"):
+        inc = qp.groupby("cls", observed=True).apply(lambda g: np.median(g[f"radar_{step}"] / g.radar - 1),
+                                                    include_groups=False)
+        S[f"kr_{step}_inc_05"], S[f"kr_{step}_inc_4"] = pct(inc.iloc[0], 1), pct(inc.iloc[-1], 1)
+    lm = pd.read_csv(RES / "link_mask.csv")
+    S["lm_hit"], S["lm_false"] = pct(lm.hit.median()), pct(lm.false.median(), 1)
+    S["lm_window"] = ext["std_window_min"]
+    gau = e[e.ref == "gauge"].copy()
+    gau["c2"] = np.where(gau.length_km <= 1, "le1", "gt1")
+    gt = gau.groupby(["c2", "mask", "corr"]).agg(rmse=("rmse", "median"), ratio=("ratio", "median"),
+                                                r=("r", "median"), n=("j", "size"), phys=("Link", "nunique"),
+                                                km=("gauge_km", "median")).reset_index()
+    S["eval_gauge"] = gt.round(4).to_dict("records")
+    for _, row in gt.iterrows():
+        S[f"eg_{row['mask'].replace('-', 'none')}_{row['corr']}_{row.c2}"] = f(row.rmse)
+        S[f"egq_{row['mask'].replace('-', 'none')}_{row['corr']}_{row.c2}"] = f(row.ratio)
+        S[f"egr_{row['mask'].replace('-', 'none')}_{row['corr']}_{row.c2}"] = f(row.r)
+    for c2 in ("le1", "gt1"):
+        g = gau[gau.c2 == c2]
+        S[f"g_n_{c2}"] = int(g[(g["mask"] == "radar") & (g["corr"] == "kralt")].j.nunique())
+        S[f"g_phys_{c2}"] = int(g.Link.nunique())
+        # paired comparison KR-alt-corrected link vs radar, averaged per physical link
+        a = g[(g["mask"] == "radar") & (g["corr"] == "kralt")].groupby("Link").rmse.mean()
+        b = g[(g["mask"] == "-") & (g["corr"] == "radar")].groupby("Link").rmse.mean()
+        both = pd.concat([a, b], axis=1, keys=["kr", "radar"]).dropna()
+        S[f"g_kr_better_{c2}"] = int((both.kr < both.radar).sum())
+        S[f"g_pairs_{c2}"] = len(both)
+        pv = sign_test(both.kr - both.radar) if len(both) else float("nan")
+        mant, expo = f"{pv:.1e}".split("e")
+        S[f"g_sign_p_{c2}"] = f"{mant}\\times10^{{{int(expo)}}}"
+    S["gauge_km"] = f"{ext['gauge_km']:g}"
+    S["n_gauges"] = int(gau.gauge.nunique())
+    return S
+
+
 def main():
     links = pd.read_csv(RES / "links.csv")
     offset = json.loads((RES / "offset.json").read_text())
@@ -237,7 +352,10 @@ def main():
         S.update(ex_sublink=ex["sublink"], ex_L=f(ex["length_km"]), ex_f=f(ex["freq_ghz"], 1), ex_hours=f(ex["hours"], 1),
                  ex_date=ex["start"][:10], ex_radar_mm=f(ex["radar_mm"], 0), ex_link_none_mm=f(ex["link_none_mm"], 0),
                  ex_link_const_mm=f(ex["link_const_mm"], 0), ex_link_rain_mm=f(ex["link_rain_mm"], 0),
-                 ex_red_med=pct(ex["rule_median_reduction"]))
+                 ex_link_kralt_mm=f(ex.get("link_kralt_mm", float("nan")), 0), ex_red_med=pct(ex["rule_median_reduction"]))
+
+    # ---- extension: drying signature, correction models, link-only classification, gauge reference
+    S.update(extension_summary(use))
     (RES / "summary.json").write_text(json.dumps(S, indent=1, ensure_ascii=False, default=float))
     print(json.dumps({k: v for k, v in S.items() if not isinstance(v, (list, dict))}, indent=0, ensure_ascii=False))
 

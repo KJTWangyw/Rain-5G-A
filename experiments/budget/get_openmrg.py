@@ -13,7 +13,8 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-FILES = ["cml/cml.nc", "cml/cml_metadata.csv", "radar/radar.nc", "readme.txt"]
+FILES = ["cml/cml.nc", "cml/cml_metadata.csv", "radar/radar.nc", "gauges/city/CityGauges-2015JJA.csv",
+         "gauges/city/CityGauges-metadata.csv", "readme.txt"]
 
 
 def md5(path, chunk=1 << 22):

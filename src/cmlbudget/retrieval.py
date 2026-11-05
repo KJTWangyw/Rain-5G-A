@@ -85,13 +85,30 @@ def held(n, starts, stops, values):
 
 
 def link_events(tsl, rsl, radar_min, threshold, margin, window, min_dry, min_event):
-    """Wet/dry masks, valid events and rain-period attenuation of one sub-link.
+    """Wet/dry masks from radar, valid events and rain-period attenuation of one sub-link.
 
     Returns a dict with the attenuation ``att`` (TSL - RSL), the masks, the event bounds with their reference and
     reference size, and ``rain_att`` = att - reference inside the events (NaN elsewhere).
     """
     att = np.asarray(tsl, dtype=float) - np.asarray(rsl, dtype=float)
     wet, dry = wet_dry(radar_min, threshold, margin)
+    return events_from_masks(att, wet, dry, window, min_dry, min_event)
+
+
+def rolling_std_mask(att, window, threshold):
+    """Wet where the centred rolling standard deviation of the attenuation exceeds ``threshold``.
+
+    Schleiss and Berne (2010) type classification that uses the link signal only; returns (wet, dry, rolling sd).
+    """
+    sd = pd.Series(att).rolling(window, center=True, min_periods=window // 2).std().to_numpy()
+    wet = sd > threshold
+    dry = (sd <= threshold) & np.isfinite(att)
+    return wet, dry, sd
+
+
+def events_from_masks(att, wet, dry, window, min_dry, min_event):
+    """Valid events (with their clear-sky reference) and rain-period attenuation for given wet/dry masks."""
+    att = np.asarray(att, dtype=float)
     starts, stops = runs(wet)
     keep = (stops - starts) >= min_event
     starts, stops = starts[keep], stops[keep]
