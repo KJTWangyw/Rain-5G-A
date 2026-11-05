@@ -1,0 +1,81 @@
+{
+  "data_dir": "data/OpenMRG",
+  "cache": "data/openmrg_minute.npz",
+  "zenodo_record": 7107689,
+  "archive": "OpenMRG.zip",
+  "archive_md5": "4e4cdf6ced4d45a084c348f245b8d690",
+  "frequency_ghz": [
+    24.0,
+    40.0
+  ],
+  "quantization_steps_db": [
+    1.0,
+    2.0
+  ],
+  "quantization_seed": 20261105,
+  "radar": {
+    "zr_a": 200.0,
+    "zr_b": 1.5,
+    "min_dbz": 7.0,
+    "path_points": 20,
+    "max_age_s": 600
+  },
+  "wet": {
+    "threshold_mmh": 0.1,
+    "margin_min": 30
+  },
+  "reference": {
+    "window_min": 360,
+    "min_dry_min": 60
+  },
+  "event_min_minutes": 10,
+  "min_wet_minutes": 600,
+  "hour_min_minutes": 45,
+  "calibration_months": [
+    6,
+    7
+  ],
+  "evaluation_months": [
+    8
+  ],
+  "length_classes_km": [
+    0,
+    0.5,
+    1,
+    2,
+    4,
+    20
+  ],
+  "bootstrap": {
+    "draws": 2000,
+    "seed": 20261106
+  },
+  "sensitivity": {
+    "margin_min": [
+      15,
+      30,
+      60
+    ],
+    "window_min": [
+      180,
+      360,
+      720
+    ]
+  },
+  "pilot_example": {
+    "snr_db": 15.0,
+    "reference_ms": 10.0,
+    "n_rb": 66
+  },
+  "rain_bins_mmh": [
+    0,
+    0.1,
+    0.5,
+    1,
+    2,
+    5,
+    10,
+    200
+  ],
+  "bin_min_minutes": 30
+}

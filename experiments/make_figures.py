@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Figures of the manuscript (600 dpi PNG for the Word build, PDF for reference).
+"""Figures of the earlier pilot coverage study (600 dpi PNG and PDF); not part of the current manuscript.
 
-Usage:  python experiments/make_figures.py [--results results] [--out paper/figures] [--lang en|zh]
+Usage:  python experiments/make_figures.py [--results results] [--out results/pilot_coverage_figures] [--lang en|zh]
 """
 from __future__ import annotations
 
@@ -273,7 +273,8 @@ def main():
     ap.add_argument("--lang", choices=sorted(TEXT), default="en")
     args = ap.parse_args()
     set_language(args.lang)
-    args.out = args.out or ROOT / "paper" / ("figures" if args.lang == "en" else f"figures_{args.lang}")
+    args.out = args.out or ROOT / "results" / ("pilot_coverage_figures" if args.lang == "en"
+                                               else f"pilot_coverage_figures_{args.lang}")
     args.out.mkdir(parents=True, exist_ok=True)
     cfg = json.loads((ROOT / "experiments" / "config.json").read_text())
     res = {k: pd.read_csv(args.results / f"{k}.csv") for k in ("variance", "components", "coverage")}
