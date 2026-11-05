@@ -59,7 +59,13 @@ def load(cfg):
 
 
 def events_of(arr, cfg, j, rsl_key="rsl", margin=None, window=None):
-    return link_events(arr["tsl"][:, j], arr[rsl_key][:, j], arr["radar_min"][:, j], cfg["wet"]["threshold_mmh"],
+    # Compare native and re-quantized attenuation on the same paired-power support.
+    valid = np.isfinite(arr["tsl"][:, j]) & np.isfinite(arr["rsl"][:, j])
+    for step in cfg["quantization_steps_db"]:
+        valid &= np.isfinite(arr[f"rsl_q{step:g}"][:, j])
+    tsl = np.where(valid, arr["tsl"][:, j], np.nan)
+    rsl = np.where(valid, arr[rsl_key][:, j], np.nan)
+    return link_events(tsl, rsl, arr["radar_min"][:, j], cfg["wet"]["threshold_mmh"],
                        cfg["wet"]["margin_min"] if margin is None else margin,
                        cfg["reference"]["window_min"] if window is None else window,
                        cfg["reference"]["min_dry_min"], cfg["event_min_minutes"])
@@ -97,12 +103,15 @@ def main():
         expected = expected_attenuation(m, radar)
         ev = events_of(arr, cfg, j)
         starts, stops, dry, wet = ev["starts"], ev["stops"], ev["dry"], ev["wet"]
+        power_valid = np.isfinite(ev["att"])
         for name, key in variants.items():
             if name == "native":
                 a = ev["rain_att"]
             else:  # the reports carry their own reference, built over the same dry minutes
-                att_q = arr["tsl"][:, j].astype(float) - arr[key][:, j].astype(float)
-                ref_q, _ = event_reference(att_q, dry, starts, window0, 1)
+                att_q = np.where(
+                    power_valid, arr["tsl"][:, j].astype(float) - arr[key][:, j].astype(float), np.nan
+                )
+                ref_q, _ = event_reference(att_q, dry, starts, window0, min_dry)
                 a = att_q - held(n_min, starts, stops, ref_q)
             rain_att[(name, j)] = a.astype(np.float32)
             for pname, pmask in period.items():
@@ -122,8 +131,8 @@ def main():
                               **{f"att_mean_cal_{n}": np.nanmean(np.where(cal, rain_att[(n, j)], np.nan))
                                  for n in variants if n != "native"}))
         # re-quantization errors of the reference and of the rain period, per event
-        rsl = arr["rsl"][:, j].astype(float)
-        var_w = arr["rsl_var"][:, j].astype(float)
+        rsl = np.where(power_valid, arr["rsl"][:, j], np.nan).astype(float)
+        var_w = np.where(power_valid, arr["rsl_var"][:, j], np.nan).astype(float)
         lo = np.maximum(starts - window0, 0)
         _, c_ref, s_ref = window_stats(rsl, dry, lo, starts, var_w)
         _, c_ev, s_ev = window_stats(rsl, wet, starts, stops, var_w)
@@ -132,7 +141,7 @@ def main():
         rec = dict(j=np.full(len(starts), j), start=tmin[starts], minutes=stops - starts, n_ref=ev["n_ref"],
                    c_ref=c_ref, sig_ref=s_ref, c_ev=c_ev, sig_ev=s_ev, att_mean=att_ev, exp_mean=exp_ev)
         for s in steps:
-            q = arr[f"rsl_q{s:g}"][:, j].astype(float)
+            q = np.where(power_valid, arr[f"rsl_q{s:g}"][:, j], np.nan).astype(float)
             u = arr[f"offset_q{s:g}"][j]
             eps = q - rsl
             _, rec[f"eps_ref_q{s:g}"] = window_stats(eps, dry, lo, starts)
@@ -271,3 +280,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

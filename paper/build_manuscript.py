@@ -21,6 +21,7 @@ import json
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import docx
@@ -34,16 +35,13 @@ import docxkit as K  # noqa: E402
 
 LANG = {
     "en": {"content": "content.md", "figures": "figures", "out": "Manuscript.docx", "abstract": "Abstract: ",
-           "keywords": "Keywords: ", "figure": "Figure", "table": "Table", "caption": "{label} {number}. ",
-           "summary": "results/summary.json"},
-    "zh": {"content": "content_zh.md", "figures": "figures_zh", "out": "Manuscript_zh.docx", "abstract": "摘要：",
-           "keywords": "关键词：", "figure": "图", "table": "表", "caption": "{label}{number}  ",
-           "summary": "results/budget/summary.json"},
+           "keywords": "Keywords: ", "figure": "Figure", "table": "Table", "caption": "{label} {number}. "},
+    "zh": {"content": "content_zh.md", "figures": "figures_zh", "out": "Manuscript_zh.docx", "abstract": "摘要　",
+           "keywords": "关键词　", "figure": "图", "table": "表", "caption": "{label}{number}  "},
 }
 
 
 def fill_placeholders(text, values):
-    values = {k: v for k, v in values.items() if not isinstance(v, (list, dict))}
     missing = sorted(set(re.findall(r"\{\{(\w+)\}\}", text)) - set(values))
     if missing:
         raise KeyError(f"placeholders without values: {missing}")
@@ -158,6 +156,7 @@ def build(content_path, out_docx, summary_path, lang="en"):
     eq_iter = iter(images)
 
     doc = docx.Document(str(HERE / "template" / "reference.docx"))
+    K.configure_compatible_fonts(doc)
     previous = None
     for kind, payload in blocks:
         if kind == "title":
@@ -167,7 +166,7 @@ def build(content_path, out_docx, summary_path, lang="en"):
                 p.add_run().add_break()
                 p.add_run(part.strip())
             for r in p.runs:
-                r.font.size = Pt(12)
+                r.font.size = Pt(14)
         elif kind == "abstract":
             p = K.body_paragraph(doc, indent=False)
             K.add_run(p, L["abstract"], bold=True)
@@ -182,7 +181,14 @@ def build(content_path, out_docx, summary_path, lang="en"):
             # a sentence continuing after a display equation ("where ...") is not indented, as in the template
             continued = payload.startswith("^ ") or (previous == "equation" and payload[:1].islower())
             p = K.body_paragraph(doc, indent=not continued)
-            K.add_rich_text(p, resolve_refs(payload[2:] if payload.startswith("^ ") else payload, numbers))
+            note = payload.startswith("!! ")
+            content = payload[3:] if note else payload[2:] if payload.startswith("^ ") else payload
+            K.add_rich_text(p, resolve_refs(content, numbers))
+            if note:
+                p.paragraph_format.keep_together = True
+                for run in p.runs:
+                    run.font.color.rgb = docx.shared.RGBColor.from_string("AD2929")
+                    run.font.size = Pt(9)
         elif kind == "equation":
             img, width = next(eq_iter)
             K.equation_table(doc, img, width, numbers.get(payload["label"]))
@@ -209,22 +215,33 @@ def build(content_path, out_docx, summary_path, lang="en"):
 
 
 def to_pdf(docx_path):
-    subprocess.run(["soffice", "--headless", "--convert-to", "pdf", "--outdir", str(docx_path.parent),
-                    str(docx_path)], check=True, capture_output=True, timeout=600)
-    return docx_path.with_suffix(".pdf")
+    docx_path = Path(docx_path).resolve()
+    destination = docx_path.with_suffix(".pdf")
+    with tempfile.TemporaryDirectory(prefix=".pdf-build-", dir=docx_path.parent) as temporary:
+        directory = Path(temporary)
+        profile = directory / "profile"
+        result = subprocess.run(
+            ["soffice", f"-env:UserInstallation={profile.as_uri()}", "--headless", "--convert-to", "pdf",
+             "--outdir", str(directory), str(docx_path)],
+            check=True, capture_output=True, text=True, timeout=600,
+        )
+        generated = directory / destination.name
+        if not generated.is_file() or generated.stat().st_size < 1000:
+            raise RuntimeError(f"LibreOffice produced no usable PDF. {result.stdout} {result.stderr}")
+        generated.replace(destination)
+    return destination
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--lang", choices=sorted(LANG), default="en")
+    ap.add_argument("--lang", choices=sorted(LANG), default="zh")
     ap.add_argument("--content", type=Path)
-    ap.add_argument("--summary", type=Path, help="numbers for the {{key}} placeholders (default: per language)")
+    ap.add_argument("--summary", type=Path, default=ROOT / "results" / "budget" / "summary.json")
     ap.add_argument("--out", type=Path)
     ap.add_argument("--no-pdf", action="store_true")
     args = ap.parse_args()
     args.content = args.content or HERE / LANG[args.lang]["content"]
     args.out = args.out or HERE / LANG[args.lang]["out"]
-    args.summary = args.summary or ROOT / LANG[args.lang]["summary"]
     numbers = build(args.content, args.out, args.summary, args.lang)
     print(f"wrote {args.out} ({sum(1 for k in numbers if k.startswith('eq'))} equations, "
           f"{sum(1 for k in numbers if k.startswith('fig'))} figures, {sum(1 for k in numbers if k.startswith('tab'))} tables)")
@@ -234,3 +251,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
