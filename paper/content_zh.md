@@ -1,212 +1,209 @@
 ::title
-5G NR导频降雨衰减估计中的共享晴空参考误差：<br>信息下界与闭式不确定性传播
+面向5G-A的短距毫米波链路降雨感知误差预算：<br>长度无关偏移的识别与标定
 
 ::abstract
-5G新空口（NR）的解调参考信号（DM-RS）为毫米波链路提供了导频级的降雨衰减观测，但导频需要与晴空参考比较，而该参考由有限个时隙估计，并在其后的每次观测中重复使用。参考误差为所有衰减估计所共有，不随时间平均而减小。本文定量刻画这一共享误差，并给出其闭式传播。对于剖面幅度估计器，平均衰减的Cramér–Rao下界可分解为不可平均消除的共享项与随平均减小的项，共享项所占比例只取决于衰减以及平均观测次数与参考时隙数之比。将参考噪声与当前噪声经估计器的驻点方程传播，得到完整的闭式方差，其中保留了常规固定权重线性化所忽略的噪声能量项；后者低于信息下界，相差因子$1+1/\gamma_{\mathrm{r}}$，其中$\gamma_{\mathrm{r}}$为单导频参考信噪比。基于28 GHz NR DM-RS OFDM链路的蒙特卡洛仿真验证了上述理论。在0 dB、2个参考时隙条件下，固定权重线性化给出的名义95%区间仅覆盖{{cov_loc}}%的情形，而闭式区间覆盖{{cov_comp}}%，并在全部16种信噪比与参考长度组合下保持在{{grid_comp_range}}，与参数化自助法结果一致，而计算成本仅为其很小一部分。研究结果明确了复用参考何时主导平均和累计降雨估计的不确定性，以及参考所需的长度。
+5G-A毫米波链路路径短，降雨衰减常只有零点几分贝，与路径长度无关的衰减误差会按路径长度的倒数放大为雨强误差。本文建立短距链路降雨反演的误差预算，把误差分为湿期长度无关偏移、晴空参考漂移、功率报告量化和导频估计噪声四类，给出量化报告的共享参考偏差和导频共享参考误差的解析式，并利用不同长度链路的跨链路回归分离长度无关偏移。基于OpenMRG数据集中{{n_use}}条26–40 GHz子链路与天气雷达的分析表明，长度无关偏移随雨强由{{W_low}} dB增至{{W_high}} dB，是0.5 km以下链路的主导误差；参考漂移与1 dB报告量化处于0.1–0.3 dB量级；导频估计噪声在毫秒级晴空参考下比后两者小一到两个数量级。以6–7月标定、8月检验，按雨强标定的偏移使0.5 km以下链路的小时雨强均方根误差降低{{ev_red_05}}%。5G-A短链路降雨感知的首要问题是长度无关偏移的标定，导频测量精度不是限制因素。
 
 ::keywords
-5G NR；降雨衰减；解调参考信号；晴空参考；Cramér–Rao下界；不确定性传播。
+5G-A；通感一体化；毫米波链路；降雨反演；湿天线衰减；误差预算。
 
 # 引言
 
-地面微波与毫米波链路上的雨致衰减提供路径平均的降雨信息，可与雨量计和天气雷达互为补充。已有研究利用商用微波链路的接收功率记录，在城市和国家尺度上绘制降雨分布，并建立了干湿判别、基线估计、湿天线修正和雨强转换等处理流程（Messer et al., 2006；Leijnse et al., 2007；Overeem et al., 2013, 2016；Chwala & Kunstmann, 2019）。密集城区的毫米波回传链路对降雨更加敏感（Han et al., 2020）。
+地面微波链路的雨致衰减提供路径平均的降雨信息。利用商用微波链路（CML）的接收电平测雨，已在城市和国家尺度得到验证（Messer et al., 2006；Leijnse et al., 2007；Overeem et al., 2011, 2013），并形成了干湿判别、基线估计、湿天线修正和雨强转换的处理流程（Overeem et al., 2016；Chwala & Kunstmann, 2019；Graf et al., 2020）。
 
-5G新空口（NR）提供了比接收功率更精细的观测。其解调参考信号（DM-RS）是放置在每个调度时隙固定子载波上的已知符号（3GPP, 2024），接收机因此能在每个导频上得到复信道观测。在通感一体化中，这类导频是探测传播介质的天然手段（Liu et al., 2022）。但导频并不直接测量衰减：接收机必须把它们与晴空参考信道比较，而该参考由有限个无雨时隙估计，随后在每次观测中重复使用。因此，参考误差为所有衰减估计所共有。时间平均可以减小独立的接收噪声，却不会改变共享分量。
+5G-A为降雨感知提供了更密集的毫米波链路。FR2频段的小站回传和固定无线接入链路多在1 km以内，频率高，对降雨敏感（Han et al., 2020）。通感一体化使基站可以直接利用解调参考信号（DM-RS）等导频的信道估计（Liu et al., 2022；3GPP, 2024），而标准测量报告中的参考信号接收功率（RSRP）以1 dB为步长上报（3GPP, 2026）。这使人自然地把测量分辨率和导频估计精度视为5G-A降雨感知的关键。
 
-已有链路降雨的不确定性研究讨论了功率量化、湿天线衰减以及降雨图的测量与插值误差（Zinevich et al., 2010；Schleiss et al., 2013；Rios Gaona et al., 2015；Pastorek et al., 2022），但尚未涉及有限导频参考的误差。导频衰减估计的不确定性通常采用一阶线性化传播（Kay, 1993），对本文的估计器而言，即在估计值处固定权重和相位。该方法在短参考和低信噪比（SNR）条件下的准确性尚未得到检验，而蒙特卡洛传播（Efron, 1979；JCGM, 2008）虽能回答这一问题，计算代价却很高。
+路径变短改变了误差的构成。雨致衰减与路径长度成正比，而湿天线衰减、晴空基线误差和功率量化误差与路径长度无关（Kharadly & Ross, 2001；Leijnse et al., 2008；Zinevich et al., 2010）。换算为雨强后，这些误差随路径缩短而放大。已有湿天线研究（Schleiss et al., 2013；Fencl et al., 2019；Pastorek et al., 2022）和误差来源试验（van Leth et al., 2018）主要针对数公里的回传链路或少数实验链路。对于0.1–1 km的链路，各误差项的相对大小以及导频级测量能带来多少改进，还缺少基于大量真实链路的定量结果。
 
-本文只研究一个问题：复用晴空参考带来的不确定性有多大，以及如何用闭式公式正确地传播。主要贡献有三点：（1）推导了共享参考下平均衰减的Cramér–Rao下界，给出不可平均消除的下限，以及判断共享误差何时占主导的闭式判据；（2）得到剖面幅度估计器的完整闭式方差，并指出固定权重线性化低于下界的两个机制；（3）通过NR DM-RS OFDM链路的蒙特卡洛仿真，在16种信噪比与参考长度组合下验证理论，内容包括区间覆盖率以及与参数化自助法的计算成本比较。
+本文研究一个问题：在短距毫米波链路上，哪些与路径长度无关的误差决定降雨反演精度，各占多大比例，主导项能否从网络数据中标定。主要贡献有三点：（1）建立短距链路降雨反演的误差预算，给出量化报告的共享参考偏差解析式和导频共享参考误差的信息下界；（2）用OpenMRG数据集中{{n_use}}条26–40 GHz、{{L_min}}–{{L_max}} km的子链路定量各误差项，表明长度无关偏移随雨强增大并主导短链路误差，参考漂移和报告量化次之，导频估计噪声可以忽略；（3）利用链路长度差异的跨链路回归标定随雨强变化的偏移，并在独立月份中检验其效果。
 
-本文其余部分安排如下：第2节建立信号模型，推导信息下界与方差传播；第3节给出仿真研究；第4节和第5节分别为讨论与结论。
+# 误差模型
 
-# 信号模型与不确定性传播
+## 2.1 短路径对衰减误差的放大
 
-## 2.1 NR DM-RS导频观测模型
+降雨事件中的衰减相对于事件前的晴空参考计算。设$\hat{P}_t$为第$t$分钟的接收电平（dB），$\hat{P}_{\mathrm{ref}}$为事件前干期的平均电平，则测得衰减为
 
-对于长度为$L$（km）的链路，雨致衰减（dB）服从ITU-R P.838-3建议书的幂律关系（ITU-R, 2005）：
+$$\hat{A}_t = \hat{P}_{\mathrm{ref}} - \hat{P}_t = kLR_t^{\alpha} + W_t + d_t + \eta_{\mathrm{ref}} - \eta_t$$ {#eq:decomp}
 
-$$A_t = k L R_t^{\alpha}$$ {#eq:powerlaw}
+^ 式中，$kLR_t^{\alpha}$为长度$L$（km）的路径上雨强$R_t$（mm/h）引起的衰减，$k$和$\alpha$由频率和极化按ITU-R P.838-3确定（ITU-R, 2005）；$W_t$为与路径长度无关的湿期偏移，主要来自天线和天线罩上的水膜；$d_t$为晴空电平相对参考时段的漂移；$\eta_{\mathrm{ref}}$和$\eta_t$分别为参考和当前观测的测量误差，即量化误差或导频估计噪声。
 
-^ 式中，$R_t$为第$t$次观测时的路径平均雨强（mm/h），$k$和$\alpha$取决于频率与极化方式。接收机观测承载PDSCH DM-RS的NR下行时隙，DM-RS采用配置类型1，位于OFDM符号2和11、分配带宽内每隔一个子载波处（3GPP, 2024），每个时隙共有$J$个导频（12个资源块时$J = 144$）。去除循环前缀、作FFT并除以已知DM-RS符号后，最小二乘导频估计建模为
+同一事件中，$\eta_{\mathrm{ref}}$对所有分钟相同，$W_t$和$d_t$变化缓慢，三者在事件内近似共享，不随时间平均而减小。一个衰减误差$\delta$（dB）相当于雨强
 
-$$r_j = h_j + e_{0j},\qquad z_{tj} = a_t\,e^{\mathrm{i}\phi_t} h_j + e_{tj},\qquad a_t = 10^{-A_t/20}$$ {#eq:model}
+$$R_{\mathrm{eq}}(\delta) = \left(\frac{\delta}{kL}\right)^{1/\alpha}$$ {#eq:req}
 
-^ 式中，$h_j$为第$j$个导频上未知的晴空信道；$r_j$为对$M$个晴空时隙相干平均得到的参考；$z_{tj}$为第$t$次降雨观测的导频，其公共相位为$\phi_t$；$e_{0j}$和$e_{tj}$为相互独立的圆对称复高斯误差，方差分别为$v_0 = v/M$和$v$。噪声方差$v$由接收机标定得到。记$H = \sum_j |h_j|^2$，单导频参考信噪比和当前信噪比分别为$\gamma_{\mathrm{r}} = H/(Jv_0)$和$\gamma_{\mathrm{t}} = a^2 H/(Jv)$；导频平均增益为1时，$\gamma_{\mathrm{r}} = M\cdot\mathrm{SNR}$，$\gamma_{\mathrm{t}} = a^2\,\mathrm{SNR}$。图@fig:schematic给出了导频结构和参考的复用方式。
+^ 它与路径长度近似成反比。28 GHz垂直极化时$k$ = {{k28}}，$\alpha$ = {{a28}}，0.5 km链路上0.1 dB的误差即相当于{{req_05_01}} mm/h的雨强。
 
-![导频结构与晴空参考的复用](fig1_schematic.png){#fig:schematic width=13.6}
+## 2.2 量化报告的共享参考偏差
 
-## 2.2 剖面幅度估计器
+功率报告把电平取整到步长为$\Delta$的网格：
 
-将信道视为冗余参数，对式(@eq:model)的联合似然关于$h_j$和$\phi_t$取最大，得到剖面幅度估计器
+$$Q(x) = u + \Delta\,\operatorname{round}\!\left(\frac{x-u}{\Delta}\right)$$ {#eq:quant}
 
-$$\hat{a}_t=\arg\min_{a>0}\left\{\sum_{j=1}^{J}\frac{|z_{tj}|^2+a^2|r_j|^2}{v+a^2v_0}-2a\left|\sum_{j=1}^{J}\frac{r_j^{*}z_{tj}}{v+a^2v_0}\right|\right\},\qquad \hat{A}_t=-20\log_{10}\hat{a}_t$$ {#eq:profile}
+^ 式中$u$为网格偏置。若窗口内电平围绕均值$c$以标准差$\sigma$起伏，平均后残留的取整误差为（Widrow & Kollár, 2008）
 
-记$P_0 = \sum_j|r_j|^2$、$P_t = \sum_j|z_{tj}|^2$、$C_t = |\sum_j r_j^{*}z_{tj}|$，驻点满足
+$$b(c;\sigma) = \sum_{m=1}^{\infty}\frac{(-1)^{m}\Delta}{\pi m}\,\mathrm{e}^{-2\pi^{2}m^{2}\sigma^{2}/\Delta^{2}}\sin\frac{2\pi m(c-u)}{\Delta}$$ {#eq:bias}
 
-$$C_t v_0\,a^2+(P_0 v-P_t v_0)\,a-C_t v=0$$ {#eq:root}
+^ $b$随$c$在网格中的位置周期变化，起伏越小，衰减越慢。对随机的网格偏置，其均方根为
 
-^ 其唯一正根即为估计值，无需数值搜索。本文关注$n$个估计值的均值$\bar{A}_n = n^{-1}\sum_{t=1}^{n}\hat{A}_t$，这些估计值均使用同一参考计算。
+$$\sigma_{b}(\sigma) = \left[\sum_{m=1}^{\infty}\frac{\Delta^{2}}{2\pi^{2}m^{2}}\,\mathrm{e}^{-4\pi^{2}m^{2}\sigma^{2}/\Delta^{2}}\right]^{1/2}$$ {#eq:brms}
 
-## 2.3 共享参考下的信息下界
+^ $\sigma$ = 0时$\sigma_b = \Delta/\sqrt{12}$，$\sigma > 0.42\Delta$时$\sigma_b < 0.01\Delta$。晴空参考窗口内电平平稳（本文数据中$\sigma$的中位数为{{sig_ref_med}} dB），取整误差几乎不被平均，$\eta_{\mathrm{ref}} = b(c_{\mathrm{ref}};\sigma_{\mathrm{ref}})$成为整个事件共享的偏差；降雨期电平随雨强变化（$\sigma$的中位数为{{sig_ev_med}} dB），取整误差被部分平均。
 
-考虑公共幅度为$a$的$n$次观测。式(@eq:model)关于$a$、相位$\phi_t$以及$h_j$实部和虚部的Fisher信息中，$a$与$\phi_t$之间不存在交叉项。对信道取Schur补，得
+## 2.3 导频测量的共享参考误差
 
-$$I_n(a)=\sum_{j=1}^{J}\frac{2n|h_j|^2}{v+n a^2 v_0}$$ {#eq:fisher}
+NR下行DM-RS配置类型1位于OFDM符号2和11，每隔一个子载波放置一个导频（3GPP, 2024），66个资源块时每个时隙有$J$ = {{J}}个导频。用$M$个晴空时隙平均得到参考$r_j = h_j + e_{0j}$，降雨时隙的最小二乘导频估计为$z_{tj} = a_t\exp(\mathrm{i}\phi_t)h_j + e_{tj}$，其中幅度$a_t$满足$A_t = -20\log_{10}a_t$，$\phi_t$为未知公共相位，$e_{0j}$和$e_{tj}$为方差$v/M$和$v$的复高斯噪声。消去未知信道和相位后，$n$次观测平均衰减的Cramér–Rao下界为（Kay, 1993）
 
-^ 再由$K = 20/\ln 10$及$\mathrm{Var}(\hat{A}) \ge K^2/[a^2 I_n(a)]$，平均衰减的任意无偏估计满足
+$$\operatorname{Var}(\bar{A}_n) \ge \frac{K^{2}}{2J}\left(\frac{1}{\gamma_{\mathrm{r}}} + \frac{1}{n\gamma_{\mathrm{t}}}\right),\quad K = \frac{20}{\ln 10}$$ {#eq:crb}
 
-$$\operatorname{Var}(\bar{A}_n)\ \ge\ B_n=\frac{K^2}{2J}\left(\frac{1}{\gamma_{\mathrm r}}+\frac{1}{n\gamma_{\mathrm t}}\right)$$ {#eq:crb}
+^ 式中$\gamma_{\mathrm{r}} = M\,\mathrm{SNR}$和$\gamma_{\mathrm{t}} = a^{2}\mathrm{SNR}$分别为单导频的参考信噪比和当前信噪比（信道平均功率归一化为1）。第一项为共享参考误差，不随$n$减小。子载波间隔120 kHz时每个时隙0.125 ms，参考时长为$T_{\mathrm{ref}}$时，共享误差的标准差为
 
-第一项是共享下限，任何平均都无法消除；第二项按$1/n$减小。共享项在下界中所占比例为
+$$\sigma_{\mathrm{ref}} = \frac{K}{\sqrt{2J\gamma_{\mathrm{r}}}},\quad \gamma_{\mathrm{r}} = \frac{T_{\mathrm{ref}}}{0.125\ \mathrm{ms}}\,\mathrm{SNR}$$ {#eq:pilotref}
 
-$$\rho_n=\frac{n\gamma_{\mathrm t}}{\gamma_{\mathrm r}+n\gamma_{\mathrm t}}=\frac{n a^2}{M+n a^2}$$ {#eq:share}
+^ 对剖面幅度估计器作一阶传播，其共享分量为$K^2/(2J\gamma_{\mathrm{r}}) + K^2/[J(\gamma_{\mathrm{r}} + \gamma_{\mathrm{t}})^2]$，在$\gamma_{\mathrm{r}} \gg 1$时与下界一致。导频估计在物理层以浮点数表示，不经过报告量化。
 
-^ 后一等式在导频平均增益为1时成立，且与信噪比无关。因此，当$n > M/a^2$时共享参考占主导：延长参考与增加平均次数作用于不确定性的不同分量。
+## 2.4 利用链路长度差异识别偏移
 
-## 2.4 方差传播
+同一城市的链路经历相近的降雨，雨致衰减与$kL$成正比，而$W$不随路径变化。按参考雨强（本文用雷达路径平均雨强）把湿期分钟分档，在第$b$档内对全部链路回归
 
-**固定权重线性化。**常规的局部传播在估计值处固定权重和相位，对式(@eq:profile)作线性化。白噪声下，它给出逐次观测的方差和所有观测共享的协方差：
+$$\bar{a}_{i,b} = W_b + \beta_b\,\bar{e}_{i,b}$$ {#eq:regress}
 
-$$\nu_t=\frac{K^2 v}{2\hat{a}_t^2 P_0},\qquad c_0=\frac{K^2 v_0}{2P_0},\qquad \operatorname{Var}_{\mathrm{loc}}(\bar{A}_n)=c_0+\frac{1}{n^2}\sum_{t=1}^{n}\nu_t$$ {#eq:local}
+^ 式中$\bar{a}_{i,b}$为链路$i$在该档的平均测得衰减，$\bar{e}_{i,b}$为按链路$i$的$k$、$\alpha$和$L$由雷达雨强计算的平均雨致衰减$kLR^{\alpha}$。截距$W_b$即长度无关偏移；参考降雨的乘性偏差只改变斜率$\beta_b$，不改变截距。把各档的$W_b$按档内平均雨强插值为单调函数$W(R)$，雨强由下式求解：
 
-由于作为插件量的参考能量期望为$\mathrm{E}P_0 = H + Jv_0 = H(1+1/\gamma_{\mathrm{r}})$，上述两项均小于式(@eq:crb)中的对应项：
+$$W(\hat{R}) + kL\hat{R}^{\alpha} = \hat{A}$$ {#eq:invert}
 
-$$\mathrm{E}\left[\operatorname{Var}_{\mathrm{loc}}(\bar{A}_n)\right]\approx\frac{B_n}{1+1/\gamma_{\mathrm r}}$$ {#eq:localbias}
+^ 左端随$\hat{R}$单调增加，解唯一；$\hat{A} < W(0)$时取$\hat{R}$ = 0。
 
-因此，固定权重线性化预测的方差低于任何无偏估计器所能达到的下限；当$\gamma_{\mathrm{r}}$较小时，据此构造的区间过窄。
+# 数据与方法
 
-**完整传播。**估计值是式(@eq:root)的根，即统计量$P_0$、$P_t$和$C_t$的光滑函数，可在无噪声点附近对其作一阶展开。为此引入以下随机量（$Y_t$和$W_t$在相位对齐后定义）：
+## 3.1 OpenMRG数据
 
-$$X=\mathrm{Re}\sum_j h_j^{*}e_{0j},\qquad Y_t=\mathrm{Re}\sum_j h_j^{*}e_{tj},\qquad W_t=\mathrm{Re}\sum_j e_{0j}^{*}e_{tj}$$
+OpenMRG数据集（Andersson et al., 2022）包含瑞典哥德堡728条子链路2015年6–8月的发射和接收电平（TSL、RSL），采样间隔10 s，分辨率约1/3 dB，并配有SMHI天气雷达和城市雨量计资料。本文选取24–40 GHz的{{n_sel}}条子链路（实际频率{{f_min}}–{{f_max}} GHz），其中{{n_use}}条（{{n_phys}}条物理链路）的湿期分钟数不少于600，用于分析。链路长度为{{L_min}}–{{L_max}} km，中位数{{L_med}} km，其中1 km以下{{n_short}}条，与5G-A毫米波链路的长度相当。主要设置见表@tab:data。
 
-$$Q_0=\sum_j|e_{0j}|^2-Jv_0,\qquad Q_t=\sum_j|e_{tj}|^2-Jv$$
-
-^ 它们互不相关，方差分别为$Hv_0/2$、$Hv/2$、$Jv_0v/2$、$Jv_0^2$和$Jv^2$。展开后有
-
-$$\delta P_0=2X+Q_0,\qquad \delta C_t\approx aX+Y_t+W_t,\qquad \delta P_t=2aY_t+Q_t$$ {#eq:perturb}
-
-^ 对式(@eq:root)应用隐函数定理，并记$D = H(v+a^2v_0)$，得
-
-$$\delta a_t=-\frac{a}{H}X-\frac{va}{D}Q_0+\frac{1}{H}Y_t+\frac{v-a^2v_0}{D}W_t+\frac{v_0 a}{D}Q_t$$ {#eq:implicit}
-
-前两项只含参考误差，为所有观测所共享；其余三项在各次观测之间相互独立。由$\delta A_t = -(K/a)\,\delta a_t$，平均衰减的方差为
-
-$$\operatorname{Var}(\bar{A}_n)\approx S+\frac{U}{n},\qquad S=\frac{K^2}{2J\gamma_{\mathrm r}}+\frac{K^2}{J(\gamma_{\mathrm r}+\gamma_{\mathrm t})^2}$$ {#eq:complete}
-
-$$U=\frac{K^2}{2J\gamma_{\mathrm t}}+\frac{K^2}{2J\gamma_{\mathrm t}\gamma_{\mathrm r}}\left(\frac{\gamma_{\mathrm r}-\gamma_{\mathrm t}}{\gamma_{\mathrm r}+\gamma_{\mathrm t}}\right)^2+\frac{K^2}{J(\gamma_{\mathrm r}+\gamma_{\mathrm t})^2}$$ {#eq:independent}
-
-$X$和$Y_t$对应的项恰好重现式(@eq:crb)下界的两项：在噪声的一阶近似下，剖面估计器是有效的。其余各项来自噪声能量$Q_0$、$Q_t$和交叉项$W_t$，量级为$1/(J\gamma^2)$；当$\gamma_{\mathrm{r}}$和$\gamma_{\mathrm{t}}$接近1时与一阶项相当，高信噪比下可以忽略。共享项超出下界的相对量为$2\gamma_{\mathrm{r}}/(\gamma_{\mathrm{r}}+\gamma_{\mathrm{t}})^2$，当$\gamma_{\mathrm{r}}$远大于$\gamma_{\mathrm{t}}$时约为$2/\gamma_{\mathrm{r}}$。
-
-## 2.5 区间构造
-
-式(@eq:complete)和式(@eq:independent)只需可观测量：将信道能量替换为$\hat{H} = \max(P_0 - Jv_0,\,0.05P_0)$，将$a_t$替换为$\hat{a}_t$；当衰减在窗口内变化时，独立项对各次观测求和，共享噪声能量项的系数取平均。名义水平为$1-\beta$的区间为
-
-$$\bar{A}_n\pm z_{1-\beta/2}\sqrt{\hat{S}+\hat{U}/n}$$ {#eq:interval}
-
-由同一组估计值构造三种对照区间：式(@eq:local)的固定权重线性化；将共享协方差错误地视为各次观测间独立的同一线性化；以及参数化自助法（Efron, 1979），其$N_{\mathrm{b}}$次重抽样中的每一次只抽取一份参考误差，并由全部观测复用：
-
-$$r^{*}_j=\tilde{h}_j+e^{*}_{0j},\qquad z^{*}_{tj}=\hat{a}_t\tilde{h}_j+e^{*}_{tj},\qquad I_{\mathrm{basic}}=\left[2\bar{A}_n-q^{*}_{1-\beta/2},\ 2\bar{A}_n-q^{*}_{\beta/2}\right]$$ {#eq:bootstrap}
-
-^ 式中，$\tilde{h}_j = r_j(\hat{H}/P_0)^{1/2}$，$q^{*}_u$为自助均值的$u$分位数。
-
-# 仿真研究
-
-## 3.1 仿真配置
-
-表@tab:config列出了仿真设置。每个时隙在时域生成：将TS 38.211的DM-RS序列映射到相应子载波，经IFFT并加循环前缀，通过时延均位于循环前缀内的三径信道，再按降雨幅度缩放、乘以随机公共相位并叠加高斯白噪声。接收机去除循环前缀、作FFT并除以已知导频。{{A_db}} dB的固定衰减对应{{length_km}} km链路上{{rain_rate}} mm/h的雨强。四种信噪比与四种参考长度组成16种条件。每种条件生成{{refs}}个独立参考，每个参考复用于32次降雨观测；对前$n$个估计值的均值（$n$取1、4、16和32）评估区间，名义水平取50%、80%、90%和95%。主条件为0 dB、$M = 2$（$\gamma_{\mathrm{r}} = {{g_r}}$，$\gamma_{\mathrm{t}} = {{g_t}}$），代表低信噪比下的短参考。
-
-::table tab:config | 仿真设置 | 4.6,10.0
-参数 | 设置
-链路 | 28 GHz，水平极化，0.5 km；$k$ = {{k_h}}，$\alpha$ = {{alpha_h}}
-NR参数集 | 子载波间隔120 kHz，1024点FFT，循环前缀72个采样点
-导频 | 12个RB，类型1 DM-RS位于符号2和11，每时隙$J$ = 144
-信道 | 三径，时延0、73、187 ns，相对功率0、−12.0、−18.4 dB
-单导频晴空信噪比 | 0、5、15、25 dB
-参考时隙数$M$ | 2、8、16、64
-降雨观测 | 每个参考32次；$A$ = {{A_db}} dB；随机公共相位
-平均次数与名义水平 | $n$ = 1、4、16、32；名义水平50%、80%、90%、95%
-蒙特卡洛 | 每种条件{{refs}}个参考；$N_{\mathrm{b}}$ = {{draws}}
+::table tab:data | 数据与处理设置 | 3.0,11.4
+项目 | 设置
+链路 | OpenMRG，2015年6–8月；24–40 GHz子链路{{n_sel}}条，分析{{n_use}}条（{{n_phys}}条物理链路）
+电平 | TSL、RSL，10 s采样，约1/3 dB分辨率，按1 min平均；衰减取TSL − RSL
+参考降雨 | SMHI雷达，2 km、5 min，$Z = 200R^{1.5}$，沿路径20点平均
+湿期 | 雷达路径雨强在前后30 min内超过0.1 mm/h；连续湿期构成事件（不短于10 min）
+晴空参考 | 事件开始前6 h内干期分钟的平均衰减，不少于60 min，在事件内保持不变
+雨强分档 | 0、0.1、0.5、1、2、5、10、200 mm/h
+报告量化 | 10 s RSL按1 dB和2 dB取整，各子链路的网格偏置随机
+标定与检验 | 6–7月标定，8月检验
+区间估计 | 以物理链路为单元的集群自助法，2000次
 ::end
 
-## 3.2 平均衰减的方差
+## 3.2 处理流程
 
-表@tab:components比较了主条件下的方差分量：式(@eq:crb)的下界、式(@eq:localbias)的固定权重线性化、式(@eq:complete)–(@eq:independent)的完整传播以及仿真结果（含95%自助置信区间）。信息下界的共享项为{{crb_S}} dB²，$n$ = 32时共享参考占其{{share_main}}%（式(@eq:share)）。完整传播预测的共享项为{{comp_S}} dB²，其中{{comp_Sq}} dB²来自参考噪声能量；仿真得到的共享协方差为{{sim_S}} dB²（95%区间{{sim_S_lo}}–{{sim_S_hi}}）。固定权重线性化的预测为{{loc_S}} dB²，比完整传播低{{loc_under_pct}}%，甚至低于下界本身。对于32个估计值的均值，仿真方差为{{emp_V}} dB²（{{emp_V_lo}}–{{emp_V_hi}}），完整传播给出{{comp_V}} dB²，固定权重线性化给出{{loc_V}} dB²。
+信号电平按1 min平均，衰减取TSL − RSL。雷达反射率按$Z = 200R^{1.5}$换算为雨强，沿路径等间隔取20个点平均。湿期由雷达判别，使各试验的干湿分类完全相同，从而只比较测量误差和偏移。每个事件以开始前6 h内干期分钟的平均衰减作为晴空参考，事件内各分钟减去同一参考得到降雨期衰减。共得到{{n_events}}个事件，持续时间的中位数为{{ev_med_min}} min。
 
-::table tab:components | 主条件下的方差分量（dB²；0 dB，$M$ = 2，$J$ = 144） | 3.6,3.6,3.4,4.0
-量 | 共享项$S$ | 独立项$U$ | $\mathrm{Var}(\bar{A}_{32})$
-信息下界 | {{crb_S}} | {{crb_U}} | {{crb_V}}
-固定权重线性化 | {{loc_S}} | {{loc_U}} | {{loc_V}}
-完整传播 | {{comp_S}} | {{comp_U}} | {{comp_V}}
-仿真 | {{sim_S}} ({{sim_S_lo}}–{{sim_S_hi}}) | {{sim_U}} | {{emp_V}} ({{emp_V_lo}}–{{emp_V_hi}})
+## 3.3 试验设计
+
+（1）长度无关偏移。按式(@eq:regress)对全部湿期分钟和7个雨强档分别回归，以物理链路为单元做集群自助，得到95%区间。另以$k_iL_i$代替$\bar{e}_{i,b}$作不依赖雷达雨强数值的回归，以Theil–Sen回归检验离群链路的影响，并检验湿期边界（15、30、60 min）和参考窗口（3、6、12 h）的影响。
+
+（2）参考漂移。在干期中重现一次降雨事件：以6 h参考预测其后一个完整干期小时的衰减（真值为0），参考窗口结束至检验小时结束的时间取1、2、4、6 h，共{{n_dry_hours}}个检验小时。
+
+（3）报告量化。把10 s RSL按$\Delta$ = 1 dB（RSRP的上报步长）和2 dB（差分L1-RSRP的步长）取整（3GPP, 2026），各子链路的网格偏置$u$随机抽取；量化后的报告用相同的干期分钟重建参考。逐事件比较参考和降雨期的量化误差与式(@eq:bias)的预测值。
+
+（4）导频仿真。在NR DM-RS时域链路中（子载波间隔120 kHz，1024点FFT，66个资源块，固定多径），取信噪比5、15、25 dB和参考长度1、8、80个时隙；每种条件生成400个参考，每个参考复用于128个降雨时隙（衰减0.5 dB），用同一参考下估计值的协方差估计共享分量。
+
+（5）偏移标定的效果。用6–7月数据标定常数偏移和$W(R)$，在8月比较三种处理的小时雨强与雷达路径平均雨强：不扣除偏移、扣除常数偏移、按式(@eq:invert)扣除$W(R)$。对1 dB和2 dB报告重复$W(R)$处理。
+
+# 结果
+
+## 4.1 长度无关偏移主导短链路误差
+
+图@fig:example为一条{{ex_L}} km、{{ex_f}} GHz子链路在一次{{ex_hours}} h降雨中的衰减。该子链路按固定规则选取：其8月小时雨强均方根误差在扣除$W(R)$后的降幅最接近0.5 km以下链路的中位数（{{ex_red_med}}%），事件为其8月雷达累计雨量最大的一次。测得衰减始终明显高于雷达对应的雨致衰减，差值随雨强增大；加上$W(R)$后两者基本吻合。该事件雷达路径累计雨量为{{ex_radar_mm}} mm，链路在不扣除偏移、扣除常数偏移和扣除$W(R)$时分别为{{ex_link_none_mm}}、{{ex_link_const_mm}}和{{ex_link_rain_mm}} mm。
+
+跨链路回归给出湿期平均的长度无关偏移$W$ = {{W}} dB（95%区间{{W_ci}} dB），斜率$\beta$ = {{beta}}（{{beta_ci}}）（图@fig:offset(a)）。不依赖雷达雨强数值的回归给出{{W_rf}} dB（{{W_rf_ci}} dB），Theil–Sen回归给出{{W_ts}} dB。26–30、32–34和37–40 GHz三个频段分别为{{W_26_30}}、{{W_32_34}}和{{W_37_40}} dB，37–40 GHz最大。改变湿期边界和参考窗口时，$W$在{{W_sens}} dB之间变化。湿期平均衰减中，这一偏移在0.5 km以下链路占{{share_05}}%，0.5–1 km占{{share_1}}%，4 km以上仍占{{share_4}}%。
+
+![一条短链路的降雨事件（子链路{{ex_sublink}}，{{ex_date}}）。(a) 衰减；(b) 雨强。灰底为湿期。](fig1_example.png){#fig:example width=13.2}
+
+偏移随雨强显著增大（图@fig:offset(b)）：雷达雨强低于{{bin_low}} mm/h时为{{W_low}} dB，超过{{bin_high}} mm/h时达{{W_high}} dB（95%区间{{W_high_ci}} dB）。1 mm/h时$W$ = {{W_at_1}} dB，是0.5 km以下链路雨致衰减的{{W_over_rain_1_05}}倍。只有雨强超过一定值，雨致衰减才大于偏移；这一临界雨强的中位数在0.5 km以下链路为{{Rc_05}} mm/h，0.5–1 km为{{Rc_1}} mm/h，1–2 km为{{Rc_2}} mm/h，4 km以上仅{{Rc_20}} mm/h。在除最高档以外的各档，按$k_iL_i$回归和Theil–Sen回归的截距与雷达回归相差不超过{{W_alt_maxdiff_low}} dB。
+
+![长度无关偏移。(a) 各子链路湿期平均衰减与雷达对应雨致衰减，直线为跨链路回归，截距即$W$；(b) 各雨强档的截距$W(R)$（阴影为95%区间），细线为28 GHz垂直极化下0.3、1、3 km路径的雨致衰减$kLR^{\alpha}$。](fig2_offset.png){#fig:offset width=14.5}
+
+## 4.2 参考漂移与报告量化
+
+干期检验中，参考误差的小时平均标准差（各子链路的中位数）在参考结束1 h后为{{drift_1h}} dB，6 h后增至{{drift_6h}} dB（图@fig:drift(a)），平均偏差仅{{drift_bias}} dB。逐分钟均方根误差为{{drift_min}} dB，与小时平均值接近，说明这一误差主要来自缓慢漂移：它在事件内近似共享，不能靠时间平均消除。
+
+1 dB报告下，参考的量化误差均方根为{{q1_ref_rms}} dB，降雨期为{{q1_ev_rms}} dB；小雨时两者落在同一量化间隔内，相互部分抵消，事件级衰减误差的均方根为{{q1_tot_rms}} dB。用式(@eq:bias)逐事件预测参考误差，回归斜率为{{q1_slope}}，$R^2$ = {{q1_r2}}（图@fig:drift(b)）。2 dB报告的对应值为{{q2_ref_rms}}、{{q2_ev_rms}}和{{q2_tot_rms}} dB，斜率{{q2_slope}}，$R^2$ = {{q2_r2}}。1 dB时预测的均方根（{{q1_ref_pred}} dB）略小于实测值，差异来自窗口内电平分布偏离高斯以及原始数据自身约1/3 dB的取整。
+
+![参考漂移与报告量化。(a) 干期检验中参考误差随参考时效的变化，阴影为各子链路的四分位范围；(b) 1 dB报告下各事件参考量化误差的实测值与式(@eq:bias)预测值，红线为1:1线。](fig3_drift_quant.png){#fig:drift width=14.5}
+
+## 4.3 导频测量的共享参考误差
+
+图@fig:pilot比较了仿真得到的共享参考误差与闭式结果。9种条件下，仿真值与闭式值相差{{pilot_rel_range}}，闭式值均落在仿真的95%区间内。15 dB时，1 ms晴空导频的共享误差标准差为{{pilot_sd_15_1ms}} dB，10 ms时为{{pilot_sd_15_10ms}} dB；5 dB、10 ms时为{{pilot_sd_5_10ms}} dB。毫秒级参考下，导频测量的共享误差比参考漂移和1 dB量化误差小一到两个数量级，比长度无关偏移小两个数量级以上。
+
+![导频测量的共享参考误差随晴空参考时长的变化。线为闭式结果，点为NR DM-RS链路仿真（误差线为95%区间）；水平线为OpenMRG中的长度无关偏移（1 mm/h）、1 h参考漂移和1 dB报告的事件级量化误差。](fig4_pilot.png){#fig:pilot width=10.5}
+
+## 4.4 误差预算与偏移标定的效果
+
+表@tab:budget以1 mm/h雨强为例，把各误差项换算为等效雨强。0.5 km以下链路上，雨致衰减只有{{b_L05_signal_db}} dB，长度无关偏移相当于{{b_L05_W1_mmh}} mm/h；扣除平均偏移后，链路间残余偏移的离散仍相当于{{b_L05_resid_mmh}} mm/h；参考漂移和1 dB量化分别相当于{{b_L05_drift_mmh}}和{{b_L05_quant_mmh}} mm/h；导频噪声只相当于{{b_L05_pilot_mmh}} mm/h。路径越长，各项越小。
+
+::table tab:budget | 1 mm/h时各误差项的等效雨强（mm/h，各子链路的中位数） | 1.4,1.45,1.8,2.3,1.8,1.8,1.8,1.8
+长度 (km) | 链路数 | 雨致衰减 (dB) | 长度无关偏移 | 残余偏移 | 参考漂移 | 1 dB量化 | 导频噪声
+≤0.5 | {{b_L05_n}} | {{b_L05_signal_db}} | {{b_L05_W1_mmh}} | {{b_L05_resid_mmh}} | {{b_L05_drift_mmh}} | {{b_L05_quant_mmh}} | {{b_L05_pilot_mmh}}
+0.5–1 | {{b_L1_n}} | {{b_L1_signal_db}} | {{b_L1_W1_mmh}} | {{b_L1_resid_mmh}} | {{b_L1_drift_mmh}} | {{b_L1_quant_mmh}} | {{b_L1_pilot_mmh}}
+1–2 | {{b_L2_n}} | {{b_L2_signal_db}} | {{b_L2_W1_mmh}} | {{b_L2_resid_mmh}} | {{b_L2_drift_mmh}} | {{b_L2_quant_mmh}} | {{b_L2_pilot_mmh}}
+2–4 | {{b_L4_n}} | {{b_L4_signal_db}} | {{b_L4_W1_mmh}} | {{b_L4_resid_mmh}} | {{b_L4_drift_mmh}} | {{b_L4_quant_mmh}} | {{b_L4_pilot_mmh}}
+>4 | {{b_L20_n}} | {{b_L20_signal_db}} | {{b_L20_W1_mmh}} | {{b_L20_resid_mmh}} | {{b_L20_drift_mmh}} | {{b_L20_quant_mmh}} | {{b_L20_pilot_mmh}}
 ::end
 
-图@fig:variance给出方差随$n$的变化。$M = 2$时，仿真方差趋于式(@eq:complete)预测的共享项，固定权重的预测始终低于下界，而独立假设的预测按$1/n$持续下降。$M = 64$时共享项很小，除独立假设外各预测一致。在16种条件中，预测的共享项落在仿真共享协方差95%区间内的有{{S_cells_inside}}种；在{{n_combos}}个条件与$n$的组合中，$\bar{A}_n$的预测方差落在仿真方差95%区间内的有{{V_combos_inside}}个。
+^ 注：长度无关偏移取$W$(1 mm/h) = {{W_at_1}} dB；残余偏移取1–2 mm/h档内链路间的离散{{resid_1}} dB；参考漂移为1 h干期检验的标准差；1 dB量化为事件级误差的均方根；导频噪声为15 dB、10 ms参考下的共享误差{{pilot_sd_15_10ms}} dB。
 
-![0 dB时平均衰减的方差随平均观测次数的变化：(a) $M$ = 2；(b) $M$ = 64。点为仿真值及其95%区间。](fig2_variance.png){#fig:variance width=14.6}
+8月的独立检验中（图@fig:eval），扣除$W(R)$使0.5 km以下链路的小时雨强均方根误差由{{ev_rmse_none_05}} mm/h降至{{ev_rmse_rain_05}} mm/h，降低{{ev_red_05}}%；0.5–1 km和1–2 km分别降低{{ev_red_1}}%和{{ev_red_2}}%。扣除常数偏移只能降至{{ev_rmse_constant_05}} mm/h。0.5 km以下链路的累计雨量比（链路/雷达）由{{ev_ratio_none_05}}降至{{ev_ratio_rain_05}}，4 km以上由{{ev_ratio_none_4}}降至{{ev_ratio_rain_4}}。小时相关系数基本不变（0.5 km以下为{{ev_r_none_05}}和{{ev_r_rain_05}}），偏移造成的主要是系统偏差。扣除$W(R)$后，1 dB报告使各长度组的均方根误差变化{{q1_inc_range}}，2 dB报告变化{{q2_inc_range}}。短链路的累计雨量仍然偏高（0.5 km以下为{{ev_ratio_rain_05}}倍），说明残余偏移和参考漂移（表@tab:budget）在短链路上仍不可忽略。
 
-## 3.3 共享分量与适用范围
-
-图@fig:shared(a)将所有条件置于同一坐标下。剖面估计器的共享方差高于下界，倍数为$1 + 2\gamma_{\mathrm{r}}/(\gamma_{\mathrm{r}}+\gamma_{\mathrm{t}})^2$；固定权重线性化则低于下界，倍数为$\gamma_{\mathrm{r}}/(\gamma_{\mathrm{r}}+1)$。主条件下两者分别为{{comp_over_crb}}和{{loc_over_crb}}。两种偏差都随$\gamma_{\mathrm{r}}$增大而消失，因此噪声能量项只在短参考或低信噪比时起作用。图@fig:shared(b)给出式(@eq:share)的共享占比：主条件下$n$ = 32时达到{{share_main}}%，$M$ = 64时降至{{share_m64}}%。
-
-![(a) 共享方差与信息下界之比，点为仿真值及其95%区间；(b) {{A_db}} dB衰减下共享项在下界中的占比，即式(@eq:share)。](fig3_shared.png){#fig:shared width=14.6}
-
-## 3.4 覆盖率、宽度与计算成本
-
-图@fig:coverage给出$n$ = 32时名义95%区间的实际覆盖率。式(@eq:interval)的闭式区间在全部16种条件下的覆盖率为{{grid_comp_range}}，在所有$n$下为{{gridall_comp_range}}。参考为2个时隙时，固定权重区间的覆盖率仅为{{loc_m2_range}}；忽略共享协方差时，覆盖率低至{{grid_ind_min}}%。参数化自助法的覆盖率为{{grid_boot_range}}。
-
-![16种条件下$n$ = 32时名义95%区间的实际覆盖率（%），每种条件{{refs}}个参考。](fig4_coverage.png){#fig:coverage width=14.6}
-
-表@tab:main和图@fig:calibration详细给出了主条件的结果。在{{refs}}个情形中，闭式区间覆盖{{cnt_comp}}个（{{cov_comp}}%），固定权重线性化覆盖{{cnt_loc}}个（{{cov_loc}}%）；配对比较中，仅被闭式区间覆盖的有{{mcn_comp_only}}个，仅被线性化区间覆盖的有{{mcn_loc_only}}个（精确McNemar检验，{{mcn_p}}）。闭式区间与自助法区间无显著差异（{{mcnb_p}}），平均宽度几乎相同（分别为{{w_comp}} dB和{{w_boot}} dB）。在50%至95%的名义水平范围内，闭式区间覆盖率与名义水平的偏差不超过{{levels_dev_max}}个百分点（图@fig:calibration(a)）。闭式区间比固定权重区间宽{{w_increase_pct}}%，多出的部分正是线性化所遗漏的方差。当衰减在32次观测中由{{ramp_start}} dB线性增至{{ramp_end}} dB时，闭式区间在所有$n$下的覆盖率保持在{{ramp_comp_range}}，而固定权重线性化在$n$ = 32时仅为{{ramp_loc_32}}%。闭式区间每个窗口的计算耗时为{{ms_complete}} ms，低于固定权重线性化（{{ms_local}} ms）；自助法耗时{{ms_boot}} ms，约为闭式方法的{{speedup}}倍。
-
-::table tab:main | 主条件下的名义95%区间（0 dB，$M$ = 2，$n$ = 32，{{refs}}个参考） | 4.0,2.0,4.4,2.1,2.1
-方法 | 覆盖次数 | 覆盖率/%（95%区间） | 宽度/dB | 耗时/ms
-独立假设（错误） | {{cnt_ind}} | {{cov_ind}} ({{cov_ind_lo}}–{{cov_ind_hi}}) | {{w_ind}} | {{ms_local}}
-固定权重线性化 | {{cnt_loc}} | {{cov_loc}} ({{cov_loc_lo}}–{{cov_loc_hi}}) | {{w_loc}} | {{ms_local}}
-完整闭式传播 | {{cnt_comp}} | {{cov_comp}} ({{cov_comp_lo}}–{{cov_comp_hi}}) | {{w_comp}} | {{ms_complete}}
-参数化自助法 | {{cnt_boot}} | {{cov_boot}} ({{cov_boot_lo}}–{{cov_boot_hi}}) | {{w_boot}} | {{ms_boot}}
-::end
-
-![主条件（0 dB，$M$ = 2，$n$ = 32）：(a) 实际覆盖率与名义水平的关系及Wilson 95%区间；(b) 95%区间的平均宽度。](fig5_calibration.png){#fig:calibration width=14.6}
+![8月的小时雨强检验。(a) 均方根误差；(b) 链路与雷达的累计雨量比。点为各长度组子链路的中位数；偏移在6–7月标定。](fig5_evaluation.png){#fig:eval width=14.5}
 
 # 讨论
 
-## 4.1 共享参考何时起主导作用
+## 5.1 对5G-A降雨感知的含义
 
-式(@eq:share)将参考的作用归结为比值$n a^2/M$。平均观测次数超过$M/a^2$时，共享项即占主导：对于{{A_db}} dB衰减，2个参考时隙时约为{{n_cross_main}}次，64个时隙时约为{{n_cross_m64}}次。这在慢时间尺度上稀疏采样时尤为重要：若每分钟取一个时隙，$M$即为晴空参考的分钟数，而小时或降雨事件的累计估计需要平均数十至数百次观测。对于累计雨量，各时段的共享误差相干叠加，因此参考长度应随所需的平均窗口增长，而不应固定不变。按$\delta R/R \approx \delta A/(\alpha A)$换算到雨强，主条件下的共享下限为{{floor_main_sd}} dB，对应{{rain_rate}} mm/h雨强下{{floor_main_rel}}%的相对误差，且无法通过平均消除；参考时隙增至64个时，该误差降至{{floor_m64_rel}}%。
+在0.1–1 km的毫米波链路上，误差的主次依次为：随雨强变化的长度无关偏移，链路间的残余偏移和参考漂移，功率报告量化，导频估计噪声。前三类都在事件内共享，提高测量分辨率不能消除。偏移标定后，1 dB报告对小时雨强的影响只有几个百分点，2 dB报告在短链路上的影响增至十几个百分点。导频级测量去除了报告量化，其噪声在毫秒级参考下可以忽略；进一步提高导频估计精度，对雨强精度几乎没有贡献。
 
-## 4.2 固定权重线性化失效的原因
+由式(@eq:req)，在雨强$R$处要达到雨强误差$\varepsilon$，允许的共享衰减误差约为$\alpha kLR^{\alpha-1}\varepsilon$。28 GHz、1 mm/h、$\varepsilon$ = 1 mm/h时，0.3 km链路允许{{sigma_req_03}} dB，1 km链路允许{{sigma_req_10}} dB；而本文测得的1 h参考漂移为{{drift_1h}} dB，残余偏移离散为{{resid_1}} dB。因此，0.5 km以下链路的降雨感知需要把偏移和漂移控制在0.1 dB以下，这比提高导频精度更关键。
 
-固定权重线性化覆盖不足有两个可分离的原因。其一，作为插件量的含噪参考能量使其预测低于信息下界，相差因子$1+1/\gamma_{\mathrm{r}}$（式(@eq:localbias)）。其二，固定权重舍弃了式(@eq:implicit)中的噪声能量项，而剖面估计器的实际方差比下界高约$2/\gamma_{\mathrm{r}}$。$\gamma_{\mathrm{r}} = {{g_r}}$时，两者叠加使共享项被低估{{loc_under_pct}}%。参数化自助法通过重新计算估计器同时捕获了这两种效应，而闭式方法以低于线性化的计算成本达到了相同的覆盖率。对于没有闭式根的估计器，例如频率相关噪声的情形，自助法仍可作为检验手段。
+5G-A基站连接距离不同的终端和回传节点，网络中天然存在路径长度的差异。式(@eq:regress)的截距不受参考降雨乘性偏差的影响；对常数偏移，不依赖雷达雨强数值的回归给出相同结果（{{W_rf}} dB对{{W}} dB）。这为在5G-A网络中自标定长度无关偏移提供了条件。
 
-## 4.3 局限与展望
+## 5.2 局限与后续工作
 
-推导假设导频间为白噪声，且在参考复用期间信道保持不变。信道或接收增益的缓慢漂移会引入随参考使用时长增长的共享误差，在已知其谱特性后，可作为附加的协方差项纳入。本文考虑的是总附加衰减，从中分离雨衰与湿天线衰减需要额外的模型（Schleiss et al., 2013；Pastorek et al., 2022）。验证基于符合标准DM-RS结构的仿真NR波形，下一步将把该方法应用于实际运营链路记录的DM-RS。
+（1）OpenMRG为回传链路设备，其天线和天线罩与5G-A有源阵列不同，偏移的量值需要在5G-A链路上重新标定，但式(@eq:regress)的方法可以直接使用。（2）雷达的2 km、5 min采样和$Z$–$R$关系误差进入$\beta_b$和8月检验；截距对乘性偏差不敏感，但会受加性偏差影响。（3）干期检验中的漂移包含CML接收电平检测的误差，导频测量能否减小这一部分，需要5G-A实测数据检验。（4）数据只覆盖一个城市的一个夏季；6–7月标定的偏移在最高雨强档为{{W_cal_top}} dB，低于全时段的{{W_high}} dB。
 
 # 结论
 
-本文定量刻画了复用晴空参考给5G NR导频降雨衰减估计带来的不确定性。Cramér–Rao下界将不可消除的共享下限与随平均减小的项分开，共享占比$n a^2/(M+n a^2)$可直接判断平均估计受参考误差还是接收噪声限制。常规固定权重线性化低于该下界，相差因子$1+1/\gamma_{\mathrm{r}}$，并遗漏了剖面估计器的噪声能量项；本文推导的完整闭式传播保留了这些项。在NR DM-RS链路仿真中，闭式区间在全部条件下对名义95%水平的覆盖率为{{grid_comp_range}}，包括固定权重线性化仅覆盖{{cov_loc}}%的0 dB、2时隙参考条件，并以很小的计算代价得到与参数化自助法一致的结果。因此，参考长度应与平均窗口一同选择，闭式方差则可以几乎零成本地随每个导频衰减估计一并给出。
+（1）短距毫米波链路降雨反演的主导误差是随雨强增大的长度无关偏移。OpenMRG的{{n_use}}条26–40 GHz子链路中，偏移由{{W_low}} dB增至{{W_high}} dB，在0.5 km以下链路占湿期平均衰减的{{share_05}}%。
+
+（2）参考漂移（1 h为{{drift_1h}} dB）和1 dB报告量化（事件级{{q1_tot_rms}} dB）是次要的共享误差，其中量化误差主要来自晴空参考，可由式(@eq:bias)逐事件预测。毫秒级参考下导频测量的共享误差约为{{pilot_sd_15_10ms}} dB，不构成限制。
+
+（3）利用链路长度差异的跨链路回归可以标定随雨强变化的偏移。在独立月份中，它使0.5 km以下链路的小时雨强均方根误差降低{{ev_red_05}}%。5G-A短链路降雨感知应优先标定长度无关偏移并控制参考漂移。
 
 #* 数据与代码可用性
 
-复现全部图表所需的代码、配置文件和结果已公开于https://github.com/KJTWangyw/Rain-5G-A。
+OpenMRG数据集（Andersson et al., 2022）以CC BY-SA 4.0许可发布于https://doi.org/10.5281/zenodo.7107689。全部分析代码、配置、汇总结果和排版脚本见https://github.com/KJTWangyw/Rain-5G-A（分支paper/short-link-error-budget），文中数字均由代码生成。
 
 #* 参考文献
 
 ::refs
 3GPP. (2024). NR; Physical channels and modulation (3GPP TS 38.211 version 18.3.0 Release 18). ETSI TS 138 211 V18.3.0.
+3GPP. (2026). NR; Requirements for support of radio resource management (3GPP TS 38.133 version 18.15.0 Release 18). ETSI TS 138 133 V18.15.0.
+Andersson, J. C. M., Olsson, J., van de Beek, R., & Hansryd, J. (2022). OpenMRG: Open data from Microwave links, Radar, and Gauges for rainfall quantification in Gothenburg, Sweden. Earth System Science Data, 14(12), 5411-5426.
 Chwala, C., & Kunstmann, H. (2019). Commercial microwave link networks for rainfall observation: Assessment of the current status and future challenges. WIREs Water, 6(2), e1337.
-Efron, B. (1979). Bootstrap methods: Another look at the jackknife. The Annals of Statistics, 7(1), 1-26.
+Fencl, M., Valtr, P., Kvicera, M., & Bareš, V. (2019). Quantifying wet antenna attenuation in 38-GHz commercial microwave links of cellular backhaul. IEEE Geoscience and Remote Sensing Letters, 16(4), 514-518.
+Graf, M., Chwala, C., Polz, J., & Kunstmann, H. (2020). Rainfall estimation from a German-wide commercial microwave link network: Optimized processing and validation for 1 year of data. Hydrology and Earth System Sciences, 24(6), 2931-2950.
 Han, C., Huo, J., Gao, Q., Su, G., & Wang, H. (2020). Rainfall monitoring based on next-generation millimeter-wave backhaul technologies in a dense urban environment. Remote Sensing, 12(6), 1045.
 ITU-R. (2005). Specific attenuation model for rain for use in prediction methods (Recommendation ITU-R P.838-3). International Telecommunication Union.
-JCGM. (2008). Evaluation of measurement data—Supplement 1 to the "Guide to the expression of uncertainty in measurement"—Propagation of distributions using a Monte Carlo method (JCGM 101:2008). Joint Committee for Guides in Metrology.
 Kay, S. M. (1993). Fundamentals of statistical signal processing: Estimation theory. Prentice Hall.
+Kharadly, M. M. Z., & Ross, R. (2001). Effect of wet antenna attenuation on propagation data statistics. IEEE Transactions on Antennas and Propagation, 49(8), 1183-1191.
 Leijnse, H., Uijlenhoet, R., & Stricker, J. N. M. (2007). Rainfall measurement using radio links from cellular communication networks. Water Resources Research, 43(3), W03201.
+Leijnse, H., Uijlenhoet, R., & Stricker, J. N. M. (2008). Microwave link rainfall estimation: Effects of link length and frequency, temporal sampling, power resolution, and wet antenna attenuation. Advances in Water Resources, 31(11), 1481-1493.
 Liu, F., Cui, Y., Masouros, C., Xu, J., Han, T. X., Eldar, Y. C., & Buzzi, S. (2022). Integrated sensing and communications: Toward dual-functional wireless networks for 6G and beyond. IEEE Journal on Selected Areas in Communications, 40(6), 1728-1767.
 Messer, H., Zinevich, A., & Alpert, P. (2006). Environmental monitoring by wireless communication networks. Science, 312(5774), 713.
+Overeem, A., Leijnse, H., & Uijlenhoet, R. (2011). Measuring urban rainfall using microwave links from commercial cellular communication networks. Water Resources Research, 47(12), W12505.
 Overeem, A., Leijnse, H., & Uijlenhoet, R. (2013). Country-wide rainfall maps from cellular communication networks. Proceedings of the National Academy of Sciences, 110(8), 2741-2745.
 Overeem, A., Leijnse, H., & Uijlenhoet, R. (2016). Retrieval algorithm for rainfall mapping from microwave links in a cellular communication network. Atmospheric Measurement Techniques, 9(5), 2425-2444.
-Pastorek, J., Fencl, M., Rieckermann, J., & Bareš, V. (2022). Precipitation estimates from commercial microwave links: Practical approaches to wet-antenna correction. IEEE Transactions on Geoscience and Remote Sensing, 60, 4104409.
-Rios Gaona, M. F., Overeem, A., Leijnse, H., & Uijlenhoet, R. (2015). Measurement and interpolation uncertainties in rainfall maps from cellular communication networks. Hydrology and Earth System Sciences, 19(8), 3571-3584.
+Pastorek, J., Fencl, M., Rieckermann, J., & Bareš, V. (2022). Precipitation estimates from commercial microwave links: Practical approaches to wet-antenna correction. IEEE Transactions on Geoscience and Remote Sensing, 60, 1-9.
 Schleiss, M., Rieckermann, J., & Berne, A. (2013). Quantification and modeling of wet-antenna attenuation for commercial microwave links. IEEE Geoscience and Remote Sensing Letters, 10(5), 1195-1199.
+van Leth, T. C., Overeem, A., Leijnse, H., & Uijlenhoet, R. (2018). A measurement campaign to assess sources of error in microwave link rainfall estimation. Atmospheric Measurement Techniques, 11(8), 4645-4669.
+Widrow, B., & Kollár, I. (2008). Quantization noise: Roundoff error in digital computation, signal processing, control, and communications. Cambridge University Press.
 Zinevich, A., Messer, H., & Alpert, P. (2010). Prediction of rainfall intensity measurement errors using commercial microwave communication links. Atmospheric Measurement Techniques, 3(5), 1385-1402.
 ::end

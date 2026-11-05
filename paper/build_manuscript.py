@@ -34,13 +34,16 @@ import docxkit as K  # noqa: E402
 
 LANG = {
     "en": {"content": "content.md", "figures": "figures", "out": "Manuscript.docx", "abstract": "Abstract: ",
-           "keywords": "Keywords: ", "figure": "Figure", "table": "Table", "caption": "{label} {number}. "},
+           "keywords": "Keywords: ", "figure": "Figure", "table": "Table", "caption": "{label} {number}. ",
+           "summary": "results/summary.json"},
     "zh": {"content": "content_zh.md", "figures": "figures_zh", "out": "Manuscript_zh.docx", "abstract": "摘要：",
-           "keywords": "关键词：", "figure": "图", "table": "表", "caption": "{label}{number}  "},
+           "keywords": "关键词：", "figure": "图", "table": "表", "caption": "{label}{number}  ",
+           "summary": "results/budget/summary.json"},
 }
 
 
 def fill_placeholders(text, values):
+    values = {k: v for k, v in values.items() if not isinstance(v, (list, dict))}
     missing = sorted(set(re.findall(r"\{\{(\w+)\}\}", text)) - set(values))
     if missing:
         raise KeyError(f"placeholders without values: {missing}")
@@ -215,12 +218,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--lang", choices=sorted(LANG), default="en")
     ap.add_argument("--content", type=Path)
-    ap.add_argument("--summary", type=Path, default=ROOT / "results" / "summary.json")
+    ap.add_argument("--summary", type=Path, help="numbers for the {{key}} placeholders (default: per language)")
     ap.add_argument("--out", type=Path)
     ap.add_argument("--no-pdf", action="store_true")
     args = ap.parse_args()
     args.content = args.content or HERE / LANG[args.lang]["content"]
     args.out = args.out or HERE / LANG[args.lang]["out"]
+    args.summary = args.summary or ROOT / LANG[args.lang]["summary"]
     numbers = build(args.content, args.out, args.summary, args.lang)
     print(f"wrote {args.out} ({sum(1 for k in numbers if k.startswith('eq'))} equations, "
           f"{sum(1 for k in numbers if k.startswith('fig'))} figures, {sum(1 for k in numbers if k.startswith('tab'))} tables)")

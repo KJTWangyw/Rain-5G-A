@@ -23,7 +23,7 @@ M_NS = "http://schemas.openxmlformats.org/officeDocument/2006/math"
 GREEK = {
     "alpha": "α", "beta": "β", "gamma": "γ", "delta": "δ", "epsilon": "ε", "eta": "η", "theta": "θ",
     "kappa": "κ", "lambda": "λ", "mu": "μ", "nu": "ν", "xi": "ξ", "pi": "π", "rho": "ρ", "sigma": "σ",
-    "tau": "τ", "phi": "φ", "varphi": "φ", "chi": "χ", "psi": "ψ", "omega": "ω",
+    "tau": "τ", "phi": "φ", "varphi": "φ", "varepsilon": "ε", "chi": "χ", "psi": "ψ", "omega": "ω",
     "Gamma": "Γ", "Delta": "Δ", "Theta": "Θ", "Lambda": "Λ", "Sigma": "Σ", "Phi": "Φ", "Omega": "Ω",
 }
 SYMBOLS = {
@@ -140,7 +140,7 @@ def math_runs(tex):
                 elif name == "sqrt":
                     g, i = _read_group(s, i)
                     emit("√", False, vert)
-                    walk(g if len(g) <= 1 else f"({g})", vert, roman)
+                    walk(g if len(g) <= 1 or g.isalnum() else f"({g})", vert, roman)
                 elif name in FUNCTIONS:
                     nxt = s[i:].lstrip()[:1]
                     lead = " " if vert == "" and last_char().isalnum() else ""
