@@ -1,6 +1,6 @@
 """Helpers that write manuscript elements in the formats of the reference template.
 
-Body paragraphs: Normal style, double spacing, first-line indent 420 twips, justified.
+Body paragraphs: Normal style, 1.3 spacing, first-line indent 420 twips, justified.
 Display equations: borderless two-column table (7650 + 646 twips) with the equation centred and "(n)".
 Tables: three-line rules (1.5 pt top/bottom, 0.75 pt under the header), 9 pt single-spaced cells.
 Captions: centred paragraphs "Figure N. ..." below figures and "Table N. ..." above tables.
@@ -15,7 +15,7 @@ from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import parse_xml
 from docx.oxml.ns import nsdecls, qn
-from docx.shared import Cm, Pt, Twips
+from docx.shared import Cm, Pt, Twips, RGBColor
 
 W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 M_NS = "http://schemas.openxmlformats.org/officeDocument/2006/math"
@@ -23,7 +23,7 @@ M_NS = "http://schemas.openxmlformats.org/officeDocument/2006/math"
 GREEK = {
     "alpha": "α", "beta": "β", "gamma": "γ", "delta": "δ", "epsilon": "ε", "eta": "η", "theta": "θ",
     "kappa": "κ", "lambda": "λ", "mu": "μ", "nu": "ν", "xi": "ξ", "pi": "π", "rho": "ρ", "sigma": "σ",
-    "tau": "τ", "phi": "φ", "varphi": "φ", "varepsilon": "ε", "chi": "χ", "psi": "ψ", "omega": "ω",
+    "tau": "τ", "phi": "φ", "varphi": "φ", "chi": "χ", "psi": "ψ", "omega": "ω",
     "Gamma": "Γ", "Delta": "Δ", "Theta": "Θ", "Lambda": "Λ", "Sigma": "Σ", "Phi": "Φ", "Omega": "Ω",
 }
 SYMBOLS = {
@@ -32,12 +32,12 @@ SYMBOLS = {
     "sum": "Σ", "partial": "∂", "ldots": "…", ",": " ", ";": " ", "quad": " ", " ": " ",
 }
 FUNCTIONS = {"ln", "log", "exp", "max", "min", "arg", "Var", "Re", "dB", "SNR"}
-ACCENTS = {"bar": "̄", "hat": "̂", "tilde": "̃"}
+ACCENTS = {"bar": "̄", "overline": "̄", "hat": "̂", "widehat": "̂", "tilde": "̃"}
 
 
 # ----------------------------------------------------------------------------- paragraphs and runs
 
-def set_spacing(paragraph, line=480, before=None, after=None):
+def set_spacing(paragraph, line=312, before=None, after=None):
     pf = paragraph.paragraph_format
     pf.line_spacing = line / 240.0
     if before is not None:
@@ -140,7 +140,7 @@ def math_runs(tex):
                 elif name == "sqrt":
                     g, i = _read_group(s, i)
                     emit("√", False, vert)
-                    walk(g if len(g) <= 1 or g.isalnum() else f"({g})", vert, roman)
+                    walk(g if len(g) <= 1 else f"({g})", vert, roman)
                 elif name in FUNCTIONS:
                     nxt = s[i:].lstrip()[:1]
                     lead = " " if vert == "" and last_char().isalnum() else ""
@@ -195,15 +195,15 @@ def add_rich_text(paragraph, text, size=None):
 EQ_PREAMBLE = r"""\documentclass[multi=eqn,border=1.5bp]{standalone}
 \usepackage{amsmath}
 \usepackage{unicode-math}
-\setmainfont{Times New Roman}
-\setmathfont{TeX Gyre Termes Math}
+\setmainfont{Nimbus Roman}
+\setmathfont{Latin Modern Math}
 \newenvironment{eqn}{\fontsize{10.5bp}{13bp}\selectfont}{}
 \begin{document}
 """
 
 
 def render_equations(equations, outdir, dpi=600):
-    """Typeset display equations with XeLaTeX (Times text, Termes math, 10.5 pt) and rasterise them.
+    """Typeset display equations with XeLaTeX at 10.5 pt and rasterise them.
 
     Returns a list of (png_path, width_cm) at natural size, one per equation.
     """
@@ -363,5 +363,29 @@ def reference_entry(doc, text):
     p = body_paragraph(doc, indent=False, align="both")
     p.paragraph_format.left_indent = Twips(420)
     p.paragraph_format.first_line_indent = Twips(-420)
-    add_rich_text(p, text)
+    p.paragraph_format.keep_together = True
+    set_spacing(p, line=264)
+    add_rich_text(p, text, size=9.5)
     return p
+
+
+def configure_compatible_fonts(doc):
+    """Keep the supplied template's page setup and select installed compatible faces."""
+    for name in ("Normal", "Title", "Heading 1", "Heading 2", "Heading 3"):
+        style = doc.styles[name]
+        style.font.color.rgb = RGBColor(0, 0, 0)
+        font = style.element.get_or_add_rPr()
+        families = font.find(qn("w:rFonts"))
+        if families is None:
+            families = parse_xml(f'<w:rFonts {nsdecls("w")}/>')
+            font.insert(0, families)
+        for attr in ("asciiTheme", "hAnsiTheme", "eastAsiaTheme", "cstheme"):
+            families.attrib.pop(qn("w:" + attr), None)
+        families.set(qn("w:ascii"), "Nimbus Roman")
+        families.set(qn("w:hAnsi"), "Nimbus Roman")
+        families.set(qn("w:eastAsia"), "AR PL UMing CN" if name == "Normal" else "Noto Sans CJK SC")
+        borders = style.element.get_or_add_pPr().find(qn("w:pBdr"))
+        if borders is not None:
+            borders.getparent().remove(borders)
+    doc.styles["Normal"].font.size = Pt(10.5)
+
