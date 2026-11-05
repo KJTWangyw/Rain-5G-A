@@ -278,6 +278,75 @@ def fig_evaluation(out):
     save(fig, out, "fig5_evaluation")
 
 
+def fig_region2(out):
+    from evaluate_corrections import kralt
+    S = json.loads((RES / "summary.json").read_text())
+    R2 = RES / "openrainer"
+    links = pd.read_csv(R2 / "links.csv")
+    links = links[links.wet_min >= CFG["min_wet_minutes"]]
+    off = json.loads((R2 / "offset.json").read_text())
+    fig, axes = plt.subplots(2, 2, figsize=(6.3, 5.0), gridspec_kw={"wspace": 0.32, "hspace": 0.45})
+    ax1, ax2, ax3, ax4 = axes.ravel()
+    edges = CFG["openrainer"]["length_classes_km"]
+    labels = ["≤2 km", "2–5 km", "5–10 km", ">10 km"]
+    cls = np.digitize(links.length_km.values, edges[1:-1], right=True)
+    for c in range(4):
+        s_ = cls == c
+        ax1.scatter(links.exp_mean[s_], links.att_mean[s_], s=5, color=CLASS_COLORS[[0, 2, 3, 4][c]], label=labels[c], lw=0)
+    x = np.linspace(0, links.exp_mean.max() * 1.05, 10)
+    ax1.plot(x, off["W"] + off["beta"] * x, color="k", lw=0.8)
+    ax1.annotate(rf"$W$ = {off['W']:.2f} dB", xy=(0.0, off["W"]), xytext=(1.6, 0.12), fontsize=7,
+                 arrowprops=dict(arrowstyle="->", lw=0.6, color="k"))
+    ax1.set_xlabel("雷达对应雨致衰减 (dB)")
+    ax1.set_ylabel("链路湿期平均衰减 (dB)")
+    ax1.set_xlim(0, None), ax1.set_ylim(0, None)
+    ax1.legend(fontsize=6, loc="upper left", handletextpad=0.1, markerscale=2, borderaxespad=0.2)
+    ax1.set_title("(a) OpenRainER跨链路回归", loc="left", fontsize=8.5)
+    mrg = pd.DataFrame(S["curve"]).sort_values("bin")
+    er = pd.DataFrame(S["r2_curve"]).sort_values("bin")
+    ax2.fill_between(mrg.R, mrg.W_lo, mrg.W_hi, color=C["offset"], alpha=0.2, lw=0)
+    ax2.plot(mrg.R, mrg.W, "o-", color=C["offset"], ms=2.5, lw=1, label="OpenMRG")
+    ax2.fill_between(er.R, er.W_lo, er.W_hi, color=C["radar"], alpha=0.2, lw=0)
+    ax2.plot(er.R, er.W, "s-", color=C["radar"], ms=2.5, lw=1, label="OpenRainER")
+    R = np.logspace(-2, np.log10(30), 200)
+    ax2.plot(R, kralt(CFG["extension"]["kralt"])(R), color=C["rain"], lw=1, ls="--", label="KR-alt（文献参数）")
+    ax2.set_xscale("log")
+    ax2.set_ylim(0, 4.5), ax2.set_xlim(5e-3, 35)
+    ax2.set_xlabel("雷达雨强 $R$ (mm/h)")
+    ax2.set_ylabel("长度无关偏移 (dB)")
+    ax2.legend(fontsize=6, loc="upper left", borderaxespad=0.2)
+    ax2.set_title("(b) 偏移随雨强的变化", loc="left", fontsize=8.5)
+    for key, lab, col, mk in (("drying_icpt_mrg", "OpenMRG（5 min分档）", C["offset"], "o"),
+                              ("drying_icpt_er", "OpenRainER（15 min分档）", C["radar"], "s")):
+        d = pd.DataFrame(S[key])
+        ax3.plot(d.lag_min, d.W, marker=mk, ms=2.5, lw=1, color=col, label=lab)
+    ax3.axhline(0, color="k", lw=0.4)
+    ax3.set_xlim(0, 90)
+    ax3.set_xlabel("雷达雨停后的时间 (min)")
+    ax3.set_ylabel("长度无关残余衰减 (dB)")
+    ax3.legend(fontsize=6, loc="upper right", borderaxespad=0.2)
+    ax3.set_title("(c) 雨停后的消退（跨链路截距）", loc="left", fontsize=8.5)
+    t = pd.DataFrame(S["r2_eval"])
+    t = t[t.ref == "gauge"]
+    bars = [("none", "不扣除", C["const"]), ("constant", "常数", C["offset"]), ("rain", "分档W(R)", "#d9a441"),
+            ("kralt", "KR-alt", C["rain"]), ("radar", "雷达", C["radar"])]
+    width = 0.15
+    from matplotlib.ticker import FixedLocator, FuncFormatter, NullLocator
+    for i, (corr, lab, col) in enumerate(bars):
+        vals = [t[(t["corr"] == corr) & (t.c2 == c)].rmse.iloc[0] for c in ("le2", "gt2")]
+        ax4.bar(np.arange(2) + (i - 2) * width, vals, width, color=col, label=lab)
+    ax4.set_xticks([0, 1], [f"≤2 km（{S['r2_g_n_le2']}条）", f">2 km（{S['r2_g_n_gt2']}条）"], fontsize=7)
+    ax4.set_yscale("log")
+    ax4.set_ylim(0.2, 2.6)
+    ax4.yaxis.set_major_locator(FixedLocator([0.2, 0.3, 0.5, 1, 2]))
+    ax4.yaxis.set_minor_locator(NullLocator())
+    ax4.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
+    ax4.set_ylabel("小时雨强均方根误差 (mm/h)")
+    ax4.legend(fontsize=6, loc="upper right", borderaxespad=0.2)
+    ax4.set_title("(d) 2022年5–9月，雨量计参考", loc="left", fontsize=8.5)
+    save(fig, out, "fig6_region2")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", type=Path, default=ROOT / "paper" / "figures_zh")
@@ -285,7 +354,7 @@ def main():
     args = ap.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
     todo = {"offset": fig_offset, "drift": fig_drift_quant, "pilot": fig_pilot, "evaluation": fig_evaluation,
-            "example": fig_example}
+            "example": fig_example, "region2": fig_region2}
     info = {}
     for name, fn in todo.items():
         if args.only and name not in args.only:
