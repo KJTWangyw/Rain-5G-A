@@ -1,0 +1,16 @@
+{
+ "example": {
+  "rule_median_reduction": 0.9135740450692593,
+  "picked_reduction": 0.9128075723763465,
+  "sublink": 371,
+  "length_km": 0.45866,
+  "freq_ghz": 38.584,
+  "start": "2015-08-25 05:00:00",
+  "hours": 6.25,
+  "radar_mm": 26.317303826411564,
+  "link_none_mm": 140.04328203365463,
+  "link_const_mm": 114.1364629389227,
+  "link_rain_mm": 61.561644705439384,
+  "link_kralt_mm": 19.5867195759753
+ }
+}
