@@ -4,9 +4,9 @@
 
 This branch holds the code, results and Chinese manuscript of
 
-> **面向5G-A的短距毫米波链路降雨感知误差预算：湿天线偏移的识别与校正**
-> (Error budget of rainfall sensing on short millimetre-wave links for 5G-A: identifying and correcting the
-> wet-antenna offset)
+> **面向5G-A的短距毫米波链路降雨感知误差预算：湿天线衰减的识别与校正**
+> (Error budget of rainfall sensing on short millimetre-wave links for 5G-A: identifying and correcting wet-antenna
+> attenuation)
 
 On a short link the rain-induced attenuation is a few tenths of a decibel, so every attenuation error that does
 not scale with the path is amplified as 1/(kL) in rain rate. The study separates four such errors — the
