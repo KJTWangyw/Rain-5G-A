@@ -1,0 +1,12 @@
+{
+ "radar": {
+  "end": 0.5323760742337454,
+  "start": 0.4531236530275805
+ },
+ "radar_convention": "end",
+ "gauge": {
+  "end": 0.4301181293489714,
+  "start": 0.33837445259004917
+ },
+ "gauge_convention": "end"
+}

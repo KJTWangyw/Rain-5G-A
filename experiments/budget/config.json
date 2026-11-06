@@ -89,5 +89,35 @@
     "gauge_hour_min_minutes": 50,
     "drying_max_min": 90,
     "drying_bin_min": 5
+  },
+  "openrainer": {
+    "data_dir": "data/OpenRainER",
+    "cache": "data/openrainer_minute.npz",
+    "zenodo_record": 22829808,
+    "archives": {
+      "CML.tar": "c350cfdd0a73227f027598b2ef674480",
+      "AWS.tar": "0939289f05dae011379e3968f434c978",
+      "RADrain.tar": "b7cfebdfa37383de4fb5ea61b2799216"
+    },
+    "round_db": 1.0,
+    "calibration_months": [
+      "2021-05",
+      "2021-09"
+    ],
+    "evaluation_months": [
+      "2022-05",
+      "2022-09"
+    ],
+    "path_points": 20,
+    "length_classes_km": [
+      0,
+      2,
+      5,
+      10,
+      30
+    ],
+    "drying_bin_min": 15,
+    "drying_max_min": 90,
+    "gauge_km": 1.0
   }
 }

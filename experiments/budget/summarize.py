@@ -160,6 +160,76 @@ def extension_summary(use):
     return S
 
 
+def drying_intercepts(res_dir, usable):
+    """Length-independent part of the residual attenuation after the rain stops: intercept on kL per lag bin."""
+    from cmlbudget.offset import fit_offset
+    d = pd.read_csv(res_dir / "drying.csv").merge(usable[["j", "kL"]], on="j")
+    d = d[d.n >= 5]
+    return pd.DataFrame([(lag, *fit_offset(g["mean"].values, g.kL.values), len(g))
+                         for lag, g in d.groupby("lag_min")], columns=["lag_min", "W", "slope", "links"])
+
+
+def region2_summary(use_mrg):
+    """Numbers of the second region (OpenRainER) and the length-independent drying of both regions."""
+    oc = CFG["openrainer"]
+    R2 = RES / "openrainer"
+    S = {}
+    links = pd.read_csv(R2 / "links.csv")
+    u = links[links.wet_min >= CFG["min_wet_minutes"]].copy()
+    off = json.loads((R2 / "offset.json").read_text())
+    timing = json.loads((R2 / "timing.json").read_text())
+    S.update(r2_n_use=len(u), r2_n_phys=int(u.Link.nunique()), r2_L_min=f(u.length_km.min()), r2_L_max=f(u.length_km.max(), 1),
+             r2_L_med=f(u.length_km.median(), 1), r2_f_min=f(u.freq_ghz.min(), 1), r2_f_max=f(u.freq_ghz.max(), 1),
+             r2_n_le1=int((u.length_km <= 1).sum()), r2_n_le2=int((u.length_km <= 2).sum()),
+             r2_W=f(off["W"]), r2_W_ci=ci(off["W_ci"]), r2_beta=f(off["beta"]), r2_W_rf=f(off["W_radar_free"]),
+             r2_W_cal=f(off["W_cal"]), r2_radar_conv=timing["radar_convention"], r2_gauge_conv=timing["gauge_convention"])
+    S["r2_share_le2"] = pct(np.median((off["W"] / u.att_mean)[u.length_km <= 2]))
+    S["r2_share_gt10"] = pct(np.median((off["W"] / u.att_mean)[u.length_km > 10]))
+    cur = pd.read_csv(R2 / "offset_curve.csv")
+    full = cur[cur.period == "full"].sort_values("bin")
+    S["r2_curve"] = full[["bin", "R", "W", "W_lo", "W_hi", "beta", "links"]].round(4).to_dict("records")
+    S["r2_W_low"], S["r2_W_high"] = f(full.W.iloc[0]), f(full.W.iloc[-1])
+    lag = pd.read_csv(R2 / "dry_lag.csv").groupby("lag_h").sd_h.median()
+    S["r2_drift_1h"], S["r2_drift_6h"] = f(lag.loc[1]), f(lag.loc[6])
+    # drying: intercepts of both regions at common lags
+    di1 = drying_intercepts(RES, use_mrg)
+    di2 = drying_intercepts(R2, u)
+    S["drying_icpt_mrg"] = di1.round(4).to_dict("records")
+    S["drying_icpt_er"] = di2.round(4).to_dict("records")
+    for lag in (7.5, 22.5, 52.5):
+        S[f"di_mrg_{int(lag)}"] = f(float(di1.set_index("lag_min").W.loc[lag]))
+        S[f"di_er_{int(lag)}"] = f(float(di2.set_index("lag_min").W.loc[lag]))
+    S["di_mrg_slope_after15"] = f(float(di1[di1.lag_min > 15].slope.abs().max()), 3)
+    S["di_er_slope_med"] = f(float(di2.slope.median()), 3)
+    # evaluation in 2022: radar and gauges
+    e = pd.read_csv(R2 / "evaluation.csv").merge(u[["j", "length_km"]], on="j")
+    e["ratio"] = e.acc_est / e.acc_ref
+    e["c2"] = np.where(e.length_km <= 2, "le2", "gt2")
+    t = e.groupby(["ref", "c2", "corr"]).agg(rmse=("rmse", "median"), ratio=("ratio", "median"), r=("r", "median"),
+                                             n=("j", "size"), phys=("Link", "nunique")).reset_index()
+    S["r2_eval"] = t.round(4).to_dict("records")
+    for _, row in t.iterrows():
+        S[f"r2_{row.ref}_{row['corr']}_{row.c2}"] = f(row.rmse)
+        S[f"r2q_{row.ref}_{row['corr']}_{row.c2}"] = f(row.ratio)
+    g = e[e.ref == "gauge"]
+    for c2 in ("le2", "gt2"):
+        s = g[g.c2 == c2]
+        a = s[s["corr"] == "kralt"].groupby("Link").rmse.mean()
+        b = s[s["corr"] == "radar"].groupby("Link").rmse.mean()
+        both = pd.concat([a, b], axis=1, keys=["kr", "radar"]).dropna()
+        p = sign_test(both.kr - both.radar)
+        mant, expo = f"{p:.1e}".split("e")
+        S[f"r2_g_n_{c2}"] = int(s[s["corr"] == "kralt"].j.nunique())
+        S[f"r2_g_phys_{c2}"] = len(both)
+        S[f"r2_g_better_{c2}"] = int((both.kr < both.radar).sum())
+        S[f"r2_g_p_{c2}"] = f"{p:.2f}" if p >= 0.01 else f"{mant}\\times10^{{{int(expo)}}}"
+        piv = s.pivot_table(index="j", columns="corr", values="rmse").dropna(subset=["none", "kralt"])
+        S[f"r2_g_red_{c2}"] = pct(np.median(1 - piv.kralt / piv.none))
+    S["r2_n_gauges"] = int(u[u.gauge_km <= oc["gauge_km"]].gauge.nunique())
+    S["r2_radar_over_gauge"] = f(float(t[(t.ref == "gauge") & (t["corr"] == "radar")].ratio.median()), 1)
+    return S
+
+
 def main():
     links = pd.read_csv(RES / "links.csv")
     offset = json.loads((RES / "offset.json").read_text())
@@ -356,6 +426,8 @@ def main():
 
     # ---- extension: drying signature, correction models, link-only classification, gauge reference
     S.update(extension_summary(use))
+    if (RES / "openrainer" / "offset.json").exists():
+        S.update(region2_summary(use))
     (RES / "summary.json").write_text(json.dumps(S, indent=1, ensure_ascii=False, default=float))
     print(json.dumps({k: v for k, v in S.items() if not isinstance(v, (list, dict))}, indent=0, ensure_ascii=False))
 
